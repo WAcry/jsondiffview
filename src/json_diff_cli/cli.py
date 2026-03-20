@@ -41,7 +41,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"json-diff-cli {__version__}")
         return 0
     if args.file_a is None or args.file_b is None:
-        parser.print_usage()
+        parser.print_usage(sys.stderr)
         return 2
 
     try:
@@ -74,9 +74,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(rendered)
         return 1 if diff.has_changes else 0
     except UserInputError as exc:
-        print(str(exc), file=sys.stderr)
+        _write_stderr(str(exc))
         return 2
-    except Exception:
+    except Exception as exc:
+        message = "internal error"
+        details = str(exc).strip()
+        if details:
+            message = f"{message}: {details}"
+        _write_stderr(message)
         return 3
 
 
@@ -96,3 +101,7 @@ def _render_output(
             sort_keys=sort_keys,
         )
     return render_full(diff, color=color, sort_keys=sort_keys)
+
+
+def _write_stderr(message: str) -> None:
+    sys.stderr.write(f"{message}\n")

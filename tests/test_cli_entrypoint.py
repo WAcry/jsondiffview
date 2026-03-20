@@ -13,6 +13,8 @@ def test_help_exits_zero():
 def test_missing_args_exits_two():
     result = run_cli()
     assert result.returncode == 2
+    assert result.stdout == ""
+    assert "json-diff FILE_A FILE_B" in result.stderr
 
 
 def test_version_exits_zero():
@@ -67,7 +69,9 @@ def test_parser_rejects_negative_context_lines():
         parser.parse_args(["left.json", "right.json", "--context-lines", "-1"])
 
 
-def test_renderer_failure_returns_three_without_raising(tmp_path, monkeypatch):
+def test_renderer_failure_returns_three_with_stderr_diagnostic(
+    tmp_path, monkeypatch, capsys
+):
     left = tmp_path / "left.json"
     right = tmp_path / "right.json"
     left.write_text('{"value": 1}', encoding="utf-8")
@@ -79,11 +83,15 @@ def test_renderer_failure_returns_three_without_raising(tmp_path, monkeypatch):
     monkeypatch.setattr("json_diff_cli.cli.render_full", raise_render_failure)
 
     result = main([str(left), str(right), "--color", "never"])
+    captured = capsys.readouterr()
 
     assert result == 3
+    assert captured.out == ""
+    assert "internal error" in captured.err.lower()
 
-
-def test_print_failure_returns_three_without_raising(tmp_path, monkeypatch):
+def test_print_failure_returns_three_with_stderr_diagnostic(
+    tmp_path, monkeypatch, capsys
+):
     left = tmp_path / "left.json"
     right = tmp_path / "right.json"
     left.write_text('{"value": 1}', encoding="utf-8")
@@ -95,5 +103,8 @@ def test_print_failure_returns_three_without_raising(tmp_path, monkeypatch):
     monkeypatch.setattr("builtins.print", raise_print_failure)
 
     result = main([str(left), str(right), "--color", "never"])
+    captured = capsys.readouterr()
 
     assert result == 3
+    assert captured.out == ""
+    assert "internal error" in captured.err.lower()
