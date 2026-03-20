@@ -14,6 +14,7 @@ class _PathSegment:
     value: str
     is_wildcard: bool = False
     is_quoted_literal: bool = False
+    is_array_index: bool = False
 
 
 def resolve_object_key_rule(
@@ -115,6 +116,8 @@ def _path_pattern_matches(
             if runtime_segment.is_quoted_literal:
                 return False
             continue
+        if runtime_segment.is_array_index:
+            return False
         if pattern_segment.value != runtime_segment.value:
             return False
     return True
@@ -238,7 +241,7 @@ def _decode_runtime_bracket_segment(raw_segment: str) -> _PathSegment:
     decoded = _decode_json_string_segment(raw_segment)
     if decoded is not None:
         return _PathSegment(value=decoded, is_quoted_literal=True)
-    return _PathSegment(value=raw_segment)
+    return _PathSegment(value=raw_segment, is_array_index=raw_segment.isdigit())
 
 
 def _decode_json_string_segment(raw_segment: str) -> str | None:

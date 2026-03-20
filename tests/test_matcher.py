@@ -49,12 +49,12 @@ def test_all_matching_yaml_path_candidates_are_considered_before_global_fallback
         yaml_global_keys=[["code"]],
         yaml_path_keys={
             "countries.*.cities": [["id"]],
-            "countries.0.cities": [["name"]],
+            "countries.regions.cities": [["name"]],
         },
     )
 
     assert resolve_object_key_rule(
-        "countries[0].cities",
+        "countries.regions.cities",
         [{"name": "Buenos Aires"}],
         rules,
     ) == ["name"]
@@ -145,6 +145,20 @@ def test_runtime_escaped_numeric_object_key_matches_literal_yaml_path_segment():
         [{"id": 1}],
         rules,
     ) == ["id"]
+
+
+def test_runtime_array_index_does_not_match_numeric_object_key_rule():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={"reports.2024.items": [["id"]]},
+    )
+
+    assert resolve_object_key_rule(
+        "reports[2024].items",
+        [{"id": 1}],
+        rules,
+    ) is None
 
 
 def test_dotted_key_path_is_allowed_in_yaml_rule_and_preserved():
