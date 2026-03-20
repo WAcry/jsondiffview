@@ -1,3 +1,5 @@
+import pytest
+
 from json_diff_cli.cli import build_parser
 from tests.conftest import run_cli
 
@@ -57,3 +59,9 @@ def test_parser_accepts_full_option_surface():
     assert args.context_lines == 2
     assert args.sort_keys is True
     assert args.quiet is True
+
+
+def test_parser_rejects_negative_context_lines():
+    parser = build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["left.json", "right.json", "--context-lines", "-1"])
