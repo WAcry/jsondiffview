@@ -115,7 +115,13 @@ def _validate_rule_path(path: str) -> None:
                 continue
             if index == 0 or index == len(segments) - 1:
                 raise UserInputError(f"Invalid match path: {path}")
-            if segments[index - 1][0] == "*" or segments[index + 1][0] == "*":
+            previous_segment, previous_is_escaped = segments[index - 1]
+            next_segment, next_is_escaped = segments[index + 1]
+            if (
+                previous_segment == "*" and not previous_is_escaped
+            ) or (
+                next_segment == "*" and not next_is_escaped
+            ):
                 raise UserInputError(f"Invalid match path: {path}")
             continue
         if not is_escaped and "*" in segment:

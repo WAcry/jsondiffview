@@ -73,6 +73,28 @@ def test_build_match_rule_set_accepts_escaped_literal_object_key_path_segments()
     assert rules.yaml_path_keys['parent["a.b"].cities'] == [["id"]]
 
 
+def test_build_match_rule_set_accepts_escaped_wildcard_literal_segment():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={'parent["*"].cities': [["id"]]},
+    )
+
+    rules = build_match_rule_set([], config)
+
+    assert rules.yaml_path_keys['parent["*"].cities'] == [["id"]]
+
+
+def test_build_match_rule_set_allows_escaped_wildcard_literal_next_to_wildcard():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={'parent.*.["*"].cities': [["id"]]},
+    )
+
+    rules = build_match_rule_set([], config)
+
+    assert rules.yaml_path_keys['parent.*.["*"].cities'] == [["id"]]
+
+
 def test_build_match_rule_set_rejects_indexed_path_syntax():
     config = MatchConfig(
         global_matches=[],
