@@ -68,6 +68,27 @@ def test_object_path_escapes_empty_key_under_parent():
     assert node.children["parent"].children[""].path == 'parent[""]'
 
 
+def test_object_path_escapes_key_with_space():
+    node = diff_values("", {"a b": 1}, {"a b": 2})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children["a b"].path == '["a b"]'
+
+
+def test_object_path_escapes_key_with_quote():
+    node = diff_values("", {'a"b': 1}, {'a"b': 2})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children['a"b'].path == '["a\\"b"]'
+
+
+def test_object_path_escapes_non_identifier_key_under_parent():
+    node = diff_values("", {"parent": {"-": 1}}, {"parent": {"-": 2}})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children["parent"].children["-"].path == 'parent["-"]'
+
+
 def test_equal_object_comparison_keeps_nested_bool_number_distinction():
     node = diff_values("", {"x": 1}, {"x": True})
 

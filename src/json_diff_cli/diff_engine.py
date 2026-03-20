@@ -168,4 +168,4 @@ def _iter_object_keys(
 
 
 def _needs_path_escape(key: str) -> bool:
-    return key == "" or any(char in key for char in ".[]")
+    return not key.isidentifier()
