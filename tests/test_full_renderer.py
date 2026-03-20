@@ -110,3 +110,27 @@ def test_full_renderer_preserves_array_item_structure_for_nested_replacement():
 def test_full_renderer_rejects_invalid_color_for_unchanged_diff():
     with pytest.raises(ValueError, match="Unsupported color mode: bogus"):
         render_full(diff_values("", 1, 1), color="bogus")
+
+
+def test_full_renderer_separates_object_replacement_halves_with_commas():
+    rendered = render_full(
+        diff_node_for({"x": 1, "y": 9}, {"x": {"a": 2}, "y": 9}),
+        color="never",
+    )
+
+    assert '"x": [-1-],' in rendered
+    assert '  }+],' in rendered
+    assert '  "y": 9' in rendered
+
+
+def test_full_renderer_separates_array_replacement_halves_with_commas():
+    rendered = render_full(
+        diff_node_for([1, 9], [[[]], 9]),
+        color="never",
+    )
+
+    lines = rendered.splitlines()
+
+    assert lines[1].strip() == "[-1-],"
+    assert lines[4].strip() == "]+],"
+    assert lines[5].strip() == "9"

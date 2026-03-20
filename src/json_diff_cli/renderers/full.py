@@ -89,9 +89,10 @@ def _render_plain_object(
 
     for index, key in enumerate(keys):
         child_lines = _render_plain_value(value[key], indent=child_indent, sort_keys=sort_keys)
-        lines.extend(_attach_object_field(key, child_lines, indent=child_indent))
+        child_lines = _attach_object_field(key, child_lines, indent=child_indent)
         if index < len(keys) - 1:
-            lines = append_suffix(lines, ",")
+            child_lines = _append_suffix_to_blocks(child_lines, ",")
+        lines.extend(child_lines)
 
     lines.append(f"{indent_text(indent)}}}")
     return lines
@@ -111,9 +112,10 @@ def _render_plain_array(
 
     for index, item in enumerate(value):
         child_lines = _render_plain_value(item, indent=child_indent, sort_keys=sort_keys)
-        lines.extend(_attach_array_item(child_lines, indent=child_indent))
+        child_lines = _attach_array_item(child_lines, indent=child_indent)
         if index < len(value) - 1:
-            lines = append_suffix(lines, ",")
+            child_lines = _append_suffix_to_blocks(child_lines, ",")
+        lines.extend(child_lines)
 
     lines.append(f"{indent_text(indent)}]")
     return lines
@@ -140,9 +142,10 @@ def _render_object_node(
             color=color,
             sort_keys=sort_keys,
         )
-        lines.extend(_attach_object_field(key, child_lines, indent=child_indent))
+        child_lines = _attach_object_field(key, child_lines, indent=child_indent)
         if index < len(keys) - 1:
-            lines = append_suffix(lines, ",")
+            child_lines = _append_suffix_to_blocks(child_lines, ",")
+        lines.extend(child_lines)
 
     lines.append(f"{indent_text(indent)}}}")
     return lines
@@ -168,9 +171,10 @@ def _render_array_node(
             color=color,
             sort_keys=sort_keys,
         )
-        lines.extend(_attach_array_item(child_lines, indent=child_indent))
+        child_lines = _attach_array_item(child_lines, indent=child_indent)
         if index < len(node.children) - 1:
-            lines = append_suffix(lines, ",")
+            child_lines = _append_suffix_to_blocks(child_lines, ",")
+        lines.extend(child_lines)
 
     lines.append(f"{indent_text(indent)}]")
     return lines
@@ -184,6 +188,7 @@ def _attach_object_field(key: str, value_lines: list[str], *, indent: int) -> li
 
     for line in value_lines:
         if line == _BLOCK_BREAK:
+            attached.append(_BLOCK_BREAK)
             needs_prefix = True
             continue
         if needs_prefix:
@@ -201,6 +206,7 @@ def _attach_array_item(value_lines: list[str], *, indent: int) -> list[str]:
 
     for line in value_lines:
         if line == _BLOCK_BREAK:
+            attached.append(_BLOCK_BREAK)
             needs_prefix = True
             continue
         if needs_prefix:
@@ -214,3 +220,22 @@ def _attach_array_item(value_lines: list[str], *, indent: int) -> list[str]:
 
 def _is_scalar(value: JsonValue) -> bool:
     return value is None or isinstance(value, (bool, int, float, str))
+
+
+def _append_suffix_to_blocks(lines: list[str], suffix: str) -> list[str]:
+    if not lines:
+        return lines
+
+    updated = list(lines)
+    block_end = len(updated) - 1
+
+    for index in range(len(updated) - 1, -1, -1):
+        if updated[index] != _BLOCK_BREAK:
+            continue
+        updated[block_end] = f"{updated[block_end]}{suffix}"
+        block_end = index - 1
+
+    if block_end >= 0:
+        updated[block_end] = f"{updated[block_end]}{suffix}"
+
+    return updated
