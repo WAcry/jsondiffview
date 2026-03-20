@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from collections.abc import Mapping
 
 from ..types import JsonValue
@@ -56,10 +57,13 @@ def strip_indent(line: str, level: int) -> str:
 
 
 def format_replaced_scalar(left: JsonValue, right: JsonValue, *, color: str) -> str:
+    color_mode = resolve_color_mode(color)
     left_text = json_text(left)
     right_text = json_text(right)
-    if color == "always":
+    if color_mode == "ansi":
         return f"{ANSI_RED}{left_text}{ANSI_RESET}{ANSI_GREEN}{right_text}{ANSI_RESET}"
+    if color_mode == "plain":
+        return f"{left_text} -> {right_text}"
     return f"[-{left_text}-][+{right_text}+]"
 
 
@@ -72,9 +76,15 @@ def wrap_removed_lines(lines: list[str], *, color: str) -> list[str]:
 
 
 def _wrap_lines(lines: list[str], *, marker: str, color: str) -> list[str]:
-    if color == "always":
+    color_mode = resolve_color_mode(color)
+    if color_mode == "ansi":
         prefix = ANSI_GREEN if marker == "added" else ANSI_RED
         return [f"{prefix}{line}{ANSI_RESET}" for line in lines]
+    if color_mode == "plain":
+        token = "+" if marker == "added" else "-"
+        if len(lines) == 1:
+            return [_insert_prefix_after_indent(lines[0], token)]
+        return [_insert_prefix_after_indent(line, f"{token} ") for line in lines]
 
     if len(lines) == 1:
         token = "+" if marker == "added" else "-"
@@ -85,3 +95,24 @@ def _wrap_lines(lines: list[str], *, marker: str, color: str) -> list[str]:
     wrapped[0] = f"[{token}{wrapped[0]}"
     wrapped[-1] = f"{wrapped[-1]}{token}]"
     return wrapped
+
+
+def resolve_color_mode(color: str) -> str:
+    if color == "always":
+        return "ansi"
+    if color == "never":
+        return "markers"
+    if color == "auto":
+        return "ansi" if _stdout_supports_color() else "plain"
+    raise ValueError(f"Unsupported color mode: {color}")
+
+
+def _stdout_supports_color() -> bool:
+    return bool(getattr(sys.stdout, "isatty", lambda: False)())
+
+
+def _insert_prefix_after_indent(line: str, prefix: str) -> str:
+    index = 0
+    while index < len(line) and line[index] == " ":
+        index += 1
+    return f"{line[:index]}{prefix}{line[index:]}"

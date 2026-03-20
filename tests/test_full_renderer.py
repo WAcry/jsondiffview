@@ -1,3 +1,5 @@
+import sys
+
 from json_diff_cli.diff_engine import diff_values
 from json_diff_cli.renderers.full import render_full
 
@@ -44,3 +46,26 @@ def test_full_renderer_formats_added_scalar_without_extra_indent_inside_markers(
     )
 
     assert '"b": [+3+]' in rendered
+
+
+def test_full_renderer_auto_color_uses_plain_text_when_stdout_is_not_a_tty(monkeypatch):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    rendered = render_full(
+        diff_node_for({"capital": "Buenos Aires"}, {"capital": "Rawson"}),
+        color="auto",
+    )
+
+    assert '[-"Buenos Aires"-][+"Rawson"+]' not in rendered
+    assert "\x1b[" not in rendered
+    assert '"capital": "Buenos Aires" -> "Rawson"' in rendered
+
+
+def test_full_renderer_always_color_keeps_ansi_highlighting():
+    rendered = render_full(
+        diff_node_for({"capital": "Buenos Aires"}, {"capital": "Rawson"}),
+        color="always",
+    )
+
+    assert "\x1b[31m" in rendered
+    assert "\x1b[32m" in rendered
