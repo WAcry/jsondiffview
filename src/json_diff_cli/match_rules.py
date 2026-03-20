@@ -53,7 +53,7 @@ def build_match_rule_set(
     config: MatchConfig | None,
 ) -> MatchRuleSet:
     normalized_cli_keys = [
-        _require_string(key, context="CLI match key")
+        _validate_cli_match_key(key)
         for key in cli_keys
     ]
     effective_config = config or MatchConfig(global_matches=[], path_matches={})
@@ -100,6 +100,13 @@ def _require_string(value: object, *, context: str) -> str:
     if not isinstance(value, str) or not value:
         raise UserInputError(f"{context} must be a non-empty string")
     return value
+
+
+def _validate_cli_match_key(value: object) -> str:
+    key = _require_string(value, context="CLI match key")
+    if any(marker in key for marker in (".", "[", "]", "*")):
+        raise UserInputError(f"Invalid CLI match key: {key}")
+    return key
 
 
 def _validate_rule_path(path: str) -> None:

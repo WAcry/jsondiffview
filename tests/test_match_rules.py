@@ -33,6 +33,11 @@ def test_build_match_rule_set_uses_empty_config_when_none():
     assert rules.yaml_path_keys == {}
 
 
+def test_build_match_rule_set_rejects_dotted_cli_match_keys():
+    with pytest.raises(UserInputError, match="identity\\.id"):
+        build_match_rule_set(["identity.id"], None)
+
+
 def test_build_match_rule_set_preserves_yaml_and_cli_priority_data():
     config = MatchConfig(
         global_matches=[["name"]],
