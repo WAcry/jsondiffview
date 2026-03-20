@@ -69,3 +69,12 @@ def test_full_renderer_always_color_keeps_ansi_highlighting():
 
     assert "\x1b[31m" in rendered
     assert "\x1b[32m" in rendered
+
+
+def test_full_renderer_always_color_separates_replacement_tokens():
+    rendered = render_full(
+        diff_node_for({"capital": "old"}, {"capital": "new"}),
+        color="always",
+    )
+
+    assert '\x1b[31m"old"\x1b[0m -> \x1b[32m"new"\x1b[0m' in rendered

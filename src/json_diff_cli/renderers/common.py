@@ -61,7 +61,7 @@ def format_replaced_scalar(left: JsonValue, right: JsonValue, *, color: str) -> 
     left_text = json_text(left)
     right_text = json_text(right)
     if color_mode == "ansi":
-        return f"{ANSI_RED}{left_text}{ANSI_RESET}{ANSI_GREEN}{right_text}{ANSI_RESET}"
+        return f"{ANSI_RED}{left_text}{ANSI_RESET} -> {ANSI_GREEN}{right_text}{ANSI_RESET}"
     if color_mode == "plain":
         return f"{left_text} -> {right_text}"
     return f"[-{left_text}-][+{right_text}+]"
