@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 
 from .types import DiffKind, DiffNode, JsonValue
@@ -29,7 +30,7 @@ def diff_values(path: str, left: JsonValue, right: JsonValue) -> DiffNode:
 
 def _diff_object(path: str, left: Mapping[str, JsonValue], right: Mapping[str, JsonValue]) -> DiffNode:
     children: dict[str, DiffNode] = {}
-    for key in sorted(set(left) | set(right)):
+    for key in _iter_object_keys(left, right):
         child_path = _append_object_path(path, key)
         if key not in left:
             children[key] = DiffNode(
@@ -95,6 +96,9 @@ def _diff_array(path: str, left: list[JsonValue], right: list[JsonValue]) -> Dif
 
 
 def _append_object_path(base_path: str, key: str) -> str:
+    if _needs_path_escape(key):
+        escaped_key = json.dumps(key, ensure_ascii=False)
+        return f"{base_path}[{escaped_key}]" if base_path else f"[{escaped_key}]"
     if not base_path:
         return key
     return f"{base_path}.{key}"
@@ -132,3 +136,24 @@ def _empty_children_for(value: JsonValue) -> dict[str, DiffNode] | tuple[DiffNod
     if _is_list(value):
         return ()
     return {}
+
+
+def _iter_object_keys(
+    left: Mapping[str, JsonValue],
+    right: Mapping[str, JsonValue],
+) -> list[str]:
+    ordered_keys: list[str] = []
+    seen: set[str] = set()
+
+    for source in (left, right):
+        for key in source:
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered_keys.append(key)
+
+    return ordered_keys
+
+
+def _needs_path_escape(key: str) -> bool:
+    return any(char in key for char in ".[]")

@@ -40,6 +40,19 @@ def test_object_field_addition_creates_added_child():
     assert node.children["name"].kind is DiffKind.UNCHANGED
 
 
+def test_object_children_preserve_input_key_order():
+    node = diff_values("", {"b": 1, "a": 2}, {"b": 1, "a": 3, "c": 4})
+
+    assert list(node.children) == ["b", "a", "c"]
+
+
+def test_object_path_escapes_ambiguous_key_segments():
+    node = diff_values("", {"a.b[c]": 1}, {"a.b[c]": 2})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children["a.b[c]"].path == '["a.b[c]"]'
+
+
 def test_positional_array_replacement_uses_numeric_index_path():
     node = diff_values("languages", ["es", "en"], ["es", "fr"])
 
