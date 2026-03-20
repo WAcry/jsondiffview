@@ -88,6 +88,37 @@ def test_escaped_literal_object_key_path_matches_yaml_rule():
     ) == ["id"]
 
 
+def test_wildcard_yaml_path_rule_does_not_match_literal_wildcard_object_key():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={"parent.*.cities": [["id"]]},
+    )
+
+    assert resolve_object_key_rule(
+        'parent["*"].cities',
+        [{"id": 1}],
+        rules,
+    ) is None
+
+
+def test_literal_wildcard_object_key_rule_beats_wildcard_segment_rule():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={
+            "parent.*.cities": [["id"]],
+            'parent["*"].cities': [["slug"]],
+        },
+    )
+
+    assert resolve_object_key_rule(
+        'parent["*"].cities',
+        [{"id": 1, "slug": "literal"}],
+        rules,
+    ) == ["slug"]
+
+
 def test_runtime_escaped_numeric_object_key_matches_literal_yaml_path_segment():
     rules = MatchRuleSet(
         cli_global_keys=[],

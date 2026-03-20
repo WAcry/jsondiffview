@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 
 from .errors import UserInputError
 from .types import MatchRuleSet
+
+
+@dataclass(frozen=True)
+class _PathSegment:
+    value: str
+    is_wildcard: bool = False
+    is_quoted_literal: bool = False
 
 
 def resolve_object_key_rule(
@@ -95,25 +103,27 @@ def _has_dotted_key(value: Mapping[str, object], dotted_key: str) -> bool:
 
 
 def _path_pattern_matches(
-    pattern_segments: list[tuple[str, bool]],
-    runtime_segments: list[str],
+    pattern_segments: list[_PathSegment],
+    runtime_segments: list[_PathSegment],
 ) -> bool:
     if len(pattern_segments) != len(runtime_segments):
         return False
 
     for pattern_segment, runtime_segment in zip(pattern_segments, runtime_segments):
-        if pattern_segment[1]:
+        if pattern_segment.is_wildcard:
+            if runtime_segment.is_quoted_literal:
+                return False
             continue
-        if pattern_segment[0] != runtime_segment:
+        if pattern_segment.value != runtime_segment.value:
             return False
     return True
 
 
-def _split_rule_path(path: str) -> list[tuple[str, bool]]:
+def _split_rule_path(path: str) -> list[_PathSegment]:
     if not path:
         return []
 
-    segments: list[tuple[str, bool]] = []
+    segments: list[_PathSegment] = []
     buffer: list[str] = []
     index = 0
     while index < len(path):
@@ -121,20 +131,24 @@ def _split_rule_path(path: str) -> list[tuple[str, bool]]:
         if char == ".":
             if not buffer:
                 raise UserInputError(f"Invalid match path: {path}")
-            segments.append(("".join(buffer), "".join(buffer) == "*"))
+            token = "".join(buffer)
+            segments.append(_PathSegment(value=token, is_wildcard=token == "*"))
             buffer.clear()
             index += 1
             continue
         if char == "[":
             if buffer:
-                segments.append(("".join(buffer), "".join(buffer) == "*"))
+                token = "".join(buffer)
+                segments.append(_PathSegment(value=token, is_wildcard=token == "*"))
                 buffer.clear()
             close_index = _find_selector_end(path, index)
             literal_segment = _decode_rule_literal_segment(
                 path[index + 1 : close_index],
                 path,
             )
-            segments.append((literal_segment, False))
+            segments.append(
+                _PathSegment(value=literal_segment, is_quoted_literal=True)
+            )
             index = close_index + 1
             if index < len(path) and path[index] != ".":
                 raise UserInputError(f"Invalid match path: {path}")
@@ -148,43 +162,41 @@ def _split_rule_path(path: str) -> list[tuple[str, bool]]:
 
     if buffer:
         token = "".join(buffer)
-        segments.append((token, token == "*"))
+        segments.append(_PathSegment(value=token, is_wildcard=token == "*"))
     elif path.endswith("."):
         raise UserInputError(f"Invalid match path: {path}")
 
     return segments
 
 
-def _split_runtime_path(path: str) -> list[str]:
+def _split_runtime_path(path: str) -> list[_PathSegment]:
     if not path:
         return []
 
-    segments: list[str] = []
+    segments: list[_PathSegment] = []
     buffer: list[str] = []
     index = 0
     while index < len(path):
         char = path[index]
         if char == ".":
             if buffer:
-                segments.append("".join(buffer))
+                segments.append(_PathSegment(value="".join(buffer)))
                 buffer.clear()
             index += 1
             continue
         if char == "[":
             if buffer:
-                segments.append("".join(buffer))
+                segments.append(_PathSegment(value="".join(buffer)))
                 buffer.clear()
             close_index = _find_selector_end(path, index)
-            segments.append(
-                _decode_runtime_bracket_segment(path[index + 1 : close_index])
-            )
+            segments.append(_decode_runtime_bracket_segment(path[index + 1 : close_index]))
             index = close_index + 1
             continue
         buffer.append(char)
         index += 1
 
     if buffer:
-        segments.append("".join(buffer))
+        segments.append(_PathSegment(value="".join(buffer)))
 
     return segments
 
@@ -221,11 +233,11 @@ def _decode_rule_literal_segment(raw_segment: str, rule_path: str) -> str:
     return decoded
 
 
-def _decode_runtime_bracket_segment(raw_segment: str) -> str:
+def _decode_runtime_bracket_segment(raw_segment: str) -> _PathSegment:
     decoded = _decode_json_string_segment(raw_segment)
     if decoded is not None:
-        return decoded
-    return raw_segment
+        return _PathSegment(value=decoded, is_quoted_literal=True)
+    return _PathSegment(value=raw_segment)
 
 
 def _decode_json_string_segment(raw_segment: str) -> str | None:
