@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from .errors import UserInputError
+from .types import MatchRuleSet
 
 
 @dataclass(frozen=True)
@@ -39,13 +40,6 @@ class MatchConfig:
             )
 
         return cls(global_matches=global_matches, path_matches=path_matches)
-
-
-@dataclass(frozen=True)
-class MatchRuleSet:
-    cli_global_keys: list[str]
-    yaml_global_keys: list[list[str]]
-    yaml_path_keys: dict[str, list[list[str]]]
 
 
 def build_match_rule_set(
