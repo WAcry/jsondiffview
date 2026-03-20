@@ -16,8 +16,8 @@ def load_json_file(path: Path) -> object:
         raise UserInputError(f"Could not read JSON file: {path}") from exc
 
     try:
-        return json.loads(raw_text)
-    except json.JSONDecodeError as exc:
+        return json.loads(raw_text, parse_constant=_reject_non_standard_constant)
+    except (json.JSONDecodeError, ValueError) as exc:
         raise UserInputError(f"Invalid JSON: {path}") from exc
 
 
@@ -36,3 +36,7 @@ def load_match_config(path: Path) -> MatchConfig:
         data = {}
 
     return MatchConfig.from_mapping(data)
+
+
+def _reject_non_standard_constant(token: str) -> None:
+    raise ValueError(f"Invalid JSON constant: {token}")
