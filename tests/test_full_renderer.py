@@ -145,3 +145,44 @@ def test_full_renderer_does_not_repeat_parent_prefix_inside_nested_replacement()
     assert rendered.count('"a": ') == 1
     assert '    [+{' in rendered
     assert '  "a":   [+{' not in rendered
+
+
+def test_full_renderer_auto_non_tty_formats_multiline_added_object_cleanly(monkeypatch):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    rendered = render_full(
+        diff_node_for({"y": 9}, {"y": 9, "x": {"a": 2}}),
+        color="auto",
+    )
+
+    assert '"x": +{' in rendered
+    assert '"a": 2' in rendered
+    assert '+ "a": 2' not in rendered
+    assert '+ }' not in rendered
+
+
+def test_full_renderer_auto_non_tty_formats_multiline_removed_object_cleanly(monkeypatch):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    rendered = render_full(
+        diff_node_for({"x": {"a": 2}, "y": 9}, {"y": 9}),
+        color="auto",
+    )
+
+    assert '"x": -{' in rendered
+    assert '"a": 2' in rendered
+    assert '- "a": 2' not in rendered
+    assert '- }' not in rendered
+
+
+def test_full_renderer_auto_non_tty_formats_multiline_replacement_cleanly(monkeypatch):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    rendered = render_full(
+        diff_node_for({"x": 1}, {"x": {"a": 2}}),
+        color="auto",
+    )
+
+    assert '"x": -1' in rendered
+    assert '"x": +{' in rendered
+    assert '+ "a": 2' not in rendered

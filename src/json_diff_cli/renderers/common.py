@@ -84,7 +84,10 @@ def _wrap_lines(lines: list[str], *, marker: str, color: str) -> list[str]:
         token = "+" if marker == "added" else "-"
         if len(lines) == 1:
             return [_insert_prefix_after_indent(lines[0], token)]
-        return [_insert_prefix_after_indent(line, f"{token} ") for line in lines]
+        wrapped = list(lines)
+        wrapped[0] = _insert_prefix_after_indent(wrapped[0], token)
+        wrapped[-1] = _insert_prefix_after_indent(wrapped[-1], token)
+        return wrapped
 
     if len(lines) == 1:
         token = "+" if marker == "added" else "-"
