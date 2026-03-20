@@ -17,7 +17,11 @@ def load_json_file(path: Path) -> object:
         raise UserInputError(f"Could not read JSON file: {path}") from exc
 
     try:
-        return json.loads(raw_text, parse_constant=_reject_non_standard_constant)
+        return json.loads(
+            raw_text,
+            parse_constant=_reject_non_standard_constant,
+            object_pairs_hook=_build_unique_json_object,
+        )
     except (json.JSONDecodeError, ValueError) as exc:
         raise UserInputError(f"Invalid JSON: {path}") from exc
 
@@ -41,6 +45,17 @@ def load_match_config(path: Path) -> MatchConfig:
 
 def _reject_non_standard_constant(token: str) -> None:
     raise ValueError(f"Invalid JSON constant: {token}")
+
+
+def _build_unique_json_object(
+    pairs: list[tuple[str, object]],
+) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate JSON key: {key}")
+        result[key] = value
+    return result
 
 
 class _UniqueKeySafeLoader(yaml.SafeLoader):
