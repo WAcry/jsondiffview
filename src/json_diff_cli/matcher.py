@@ -65,10 +65,19 @@ def _lookup_yaml_path_candidates(
     yaml_path_keys: dict[str, list[list[str]]],
 ) -> list[list[str]] | None:
     runtime_segments = _split_runtime_path(runtime_path)
+    matched_patterns: list[tuple[int, int, list[list[str]]]] = []
+    for order, (pattern, candidates) in enumerate(yaml_path_keys.items()):
+        pattern_segments = _split_rule_path(pattern)
+        if _path_pattern_matches(pattern_segments, runtime_segments):
+            matched_patterns.append(
+                (_path_specificity(pattern_segments), order, candidates)
+            )
+
+    matched_patterns.sort(key=lambda item: (-item[0], item[1]))
+
     matched_candidates: list[list[str]] = []
-    for pattern, candidates in yaml_path_keys.items():
-        if _path_pattern_matches(_split_rule_path(pattern), runtime_segments):
-            matched_candidates.extend(candidates)
+    for _, _, candidates in matched_patterns:
+        matched_candidates.extend(candidates)
     return matched_candidates or None
 
 
@@ -113,14 +122,16 @@ def _path_pattern_matches(
 
     for pattern_segment, runtime_segment in zip(pattern_segments, runtime_segments):
         if pattern_segment.is_wildcard:
-            if runtime_segment.is_quoted_literal:
-                return False
             continue
         if runtime_segment.is_array_index:
             return False
         if pattern_segment.value != runtime_segment.value:
             return False
     return True
+
+
+def _path_specificity(pattern_segments: list[_PathSegment]) -> int:
+    return sum(not segment.is_wildcard for segment in pattern_segments)
 
 
 def _split_rule_path(path: str) -> list[_PathSegment]:
