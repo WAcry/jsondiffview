@@ -78,3 +78,28 @@ def test_full_renderer_always_color_separates_replacement_tokens():
     )
 
     assert '\x1b[31m"old"\x1b[0m -> \x1b[32m"new"\x1b[0m' in rendered
+
+
+def test_full_renderer_preserves_parent_field_for_nested_replacement():
+    rendered = render_full(
+        diff_node_for({"root": {"a": 1}}, {"root": {"a": {"b": 2}}}),
+        color="never",
+    )
+
+    assert '"a": [-1-]' in rendered
+    assert '"a": [+{' in rendered
+    assert '      "b": 2' in rendered
+
+
+def test_full_renderer_preserves_array_item_structure_for_nested_replacement():
+    rendered = render_full(
+        diff_node_for([1], [[[]]]),
+        color="never",
+    )
+
+    lines = rendered.splitlines()
+
+    assert lines[1].strip() == "[-1-]"
+    assert lines[2].strip() == "[+["
+    assert lines[3].strip() == "[]"
+    assert lines[4].strip() == "]+]"

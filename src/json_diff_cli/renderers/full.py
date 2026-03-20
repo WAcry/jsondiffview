@@ -15,9 +15,15 @@ from .common import (
     wrap_removed_lines,
 )
 
+_BLOCK_BREAK = "\0BLOCK_BREAK\0"
+
 
 def render_full(node: DiffNode, *, color: str, sort_keys: bool = False) -> str:
-    return "\n".join(_render_node_lines(node, indent=0, color=color, sort_keys=sort_keys))
+    return "\n".join(
+        line
+        for line in _render_node_lines(node, indent=0, color=color, sort_keys=sort_keys)
+        if line != _BLOCK_BREAK
+    )
 
 
 def _render_node_lines(
@@ -50,7 +56,7 @@ def _render_node_lines(
             _render_plain_value(node.right, indent=indent, sort_keys=sort_keys),
             color=color,
         )
-        return [*removed_lines, *added_lines]
+        return [*removed_lines, _BLOCK_BREAK, *added_lines]
     if node.kind is DiffKind.OBJECT:
         return _render_object_node(node, indent=indent, color=color, sort_keys=sort_keys)
     if node.kind is DiffKind.ARRAY:
@@ -171,14 +177,36 @@ def _render_array_node(
 def _attach_object_field(key: str, value_lines: list[str], *, indent: int) -> list[str]:
     key_text = json_text(key)
     prefix = f"{indent_text(indent)}{key_text}: "
-    attached = list(value_lines)
-    attached[0] = f"{prefix}{strip_indent(attached[0], indent)}"
+    attached: list[str] = []
+    needs_prefix = True
+
+    for line in value_lines:
+        if line == _BLOCK_BREAK:
+            needs_prefix = True
+            continue
+        if needs_prefix:
+            attached.append(f"{prefix}{strip_indent(line, indent)}")
+            needs_prefix = False
+            continue
+        attached.append(line)
+
     return attached
 
 
 def _attach_array_item(value_lines: list[str], *, indent: int) -> list[str]:
-    attached = list(value_lines)
-    attached[0] = f"{indent_text(indent)}{strip_indent(attached[0], indent)}"
+    attached: list[str] = []
+    needs_prefix = True
+
+    for line in value_lines:
+        if line == _BLOCK_BREAK:
+            needs_prefix = True
+            continue
+        if needs_prefix:
+            attached.append(f"{indent_text(indent)}{strip_indent(line, indent)}")
+            needs_prefix = False
+            continue
+        attached.append(line)
+
     return attached
 
 
