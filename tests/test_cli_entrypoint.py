@@ -1,6 +1,6 @@
 import pytest
 
-from json_diff_cli.cli import build_parser
+from json_diff_cli.cli import build_parser, main
 from json_diff_cli.testing import run_cli
 
 
@@ -65,3 +65,35 @@ def test_parser_rejects_negative_context_lines():
     parser = build_parser()
     with pytest.raises(SystemExit):
         parser.parse_args(["left.json", "right.json", "--context-lines", "-1"])
+
+
+def test_renderer_failure_returns_three_without_raising(tmp_path, monkeypatch):
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    left.write_text('{"value": 1}', encoding="utf-8")
+    right.write_text('{"value": 2}', encoding="utf-8")
+
+    def raise_render_failure(*args, **kwargs):
+        raise RuntimeError("renderer exploded")
+
+    monkeypatch.setattr("json_diff_cli.cli.render_full", raise_render_failure)
+
+    result = main([str(left), str(right), "--color", "never"])
+
+    assert result == 3
+
+
+def test_print_failure_returns_three_without_raising(tmp_path, monkeypatch):
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    left.write_text('{"value": 1}', encoding="utf-8")
+    right.write_text('{"value": 2}', encoding="utf-8")
+
+    def raise_print_failure(*args, **kwargs):
+        raise OSError("stdout closed")
+
+    monkeypatch.setattr("builtins.print", raise_print_failure)
+
+    result = main([str(left), str(right), "--color", "never"])
+
+    assert result == 3

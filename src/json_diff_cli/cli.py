@@ -60,25 +60,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             array_mode=args.array_match,
             match_rules=match_rules,
         )
+        if args.quiet:
+            return 1 if diff.has_changes else 0
+
+        rendered = _render_output(
+            diff,
+            view=args.view,
+            color=args.color,
+            context_lines=args.context_lines,
+            sort_keys=args.sort_keys,
+        )
+        if rendered:
+            print(rendered)
+        return 1 if diff.has_changes else 0
     except UserInputError as exc:
         print(str(exc), file=sys.stderr)
         return 2
     except Exception:
         return 3
-
-    if args.quiet:
-        return 1 if diff.has_changes else 0
-
-    rendered = _render_output(
-        diff,
-        view=args.view,
-        color=args.color,
-        context_lines=args.context_lines,
-        sort_keys=args.sort_keys,
-    )
-    if rendered:
-        print(rendered)
-    return 1 if diff.has_changes else 0
 
 
 def _render_output(
