@@ -6,37 +6,55 @@ from .types import DiffKind, DiffNode, JsonValue
 
 
 def diff_values(path: str, left: JsonValue, right: JsonValue) -> DiffNode:
+    if _json_values_equal(left, right):
+        return DiffNode(
+            path=path,
+            kind=DiffKind.UNCHANGED,
+            left=left,
+            right=right,
+            children=_empty_children_for(left),
+        )
     if isinstance(left, Mapping) and isinstance(right, Mapping):
         return _diff_object(path, left, right)
     if _is_list(left) and _is_list(right):
         return _diff_array(path, left, right)
-    if _json_scalars_equal(left, right):
-        return DiffNode(path=path, kind=DiffKind.UNCHANGED, left=left, right=right)
-    return DiffNode(path=path, kind=DiffKind.REPLACED, left=left, right=right)
+    return DiffNode(
+        path=path,
+        kind=DiffKind.REPLACED,
+        left=left,
+        right=right,
+        children={},
+    )
 
 
 def _diff_object(path: str, left: Mapping[str, JsonValue], right: Mapping[str, JsonValue]) -> DiffNode:
-    children: list[DiffNode] = []
+    children: dict[str, DiffNode] = {}
     for key in sorted(set(left) | set(right)):
         child_path = _append_object_path(path, key)
         if key not in left:
-            children.append(
-                DiffNode(path=child_path, kind=DiffKind.ADDED, right=right[key])
+            children[key] = DiffNode(
+                path=child_path,
+                kind=DiffKind.ADDED,
+                right=right[key],
+                children={},
             )
             continue
         if key not in right:
-            children.append(
-                DiffNode(path=child_path, kind=DiffKind.REMOVED, left=left[key])
+            children[key] = DiffNode(
+                path=child_path,
+                kind=DiffKind.REMOVED,
+                left=left[key],
+                children={},
             )
             continue
-        children.append(diff_values(child_path, left[key], right[key]))
+        children[key] = diff_values(child_path, left[key], right[key])
 
     return DiffNode(
         path=path,
         kind=DiffKind.OBJECT,
         left=dict(left),
         right=dict(right),
-        children=tuple(children),
+        children=children,
     )
 
 
@@ -47,12 +65,22 @@ def _diff_array(path: str, left: list[JsonValue], right: list[JsonValue]) -> Dif
         child_path = _append_array_path(path, index)
         if index >= len(left):
             children.append(
-                DiffNode(path=child_path, kind=DiffKind.ADDED, right=right[index])
+                DiffNode(
+                    path=child_path,
+                    kind=DiffKind.ADDED,
+                    right=right[index],
+                    children={},
+                )
             )
             continue
         if index >= len(right):
             children.append(
-                DiffNode(path=child_path, kind=DiffKind.REMOVED, left=left[index])
+                DiffNode(
+                    path=child_path,
+                    kind=DiffKind.REMOVED,
+                    left=left[index],
+                    children={},
+                )
             )
             continue
         children.append(diff_values(child_path, left[index], right[index]))
@@ -80,7 +108,11 @@ def _is_list(value: JsonValue) -> bool:
     return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
 
 
-def _json_scalars_equal(left: JsonValue, right: JsonValue) -> bool:
+def _json_values_equal(left: JsonValue, right: JsonValue) -> bool:
+    if isinstance(left, Mapping) and isinstance(right, Mapping):
+        return dict(left) == dict(right)
+    if _is_list(left) and _is_list(right):
+        return list(left) == list(right)
     if left is right:
         return True
     if isinstance(left, bool) != isinstance(right, bool):
@@ -92,3 +124,11 @@ def _json_scalars_equal(left: JsonValue, right: JsonValue) -> bool:
 
 def _is_number(value: JsonValue) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _empty_children_for(value: JsonValue) -> dict[str, DiffNode] | tuple[DiffNode, ...]:
+    if isinstance(value, Mapping):
+        return {}
+    if _is_list(value):
+        return ()
+    return {}

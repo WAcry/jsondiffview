@@ -7,6 +7,7 @@ from typing import TypeAlias
 
 JsonScalar: TypeAlias = None | bool | int | float | str
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
+DiffChildren: TypeAlias = dict[str, "DiffNode"] | tuple["DiffNode", ...]
 
 
 class _MissingValue:
@@ -34,12 +35,14 @@ class DiffNode:
     kind: DiffKind
     left: JsonValue | _MissingValue = MISSING
     right: JsonValue | _MissingValue = MISSING
-    children: tuple["DiffNode", ...] = ()
+    children: DiffChildren = ()
 
     @property
     def has_changes(self) -> bool:
         if self.kind in (DiffKind.ADDED, DiffKind.REMOVED, DiffKind.REPLACED):
             return True
+        if isinstance(self.children, dict):
+            return any(child.has_changes for child in self.children.values())
         return any(child.has_changes for child in self.children)
 
 
