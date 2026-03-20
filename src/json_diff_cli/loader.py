@@ -57,6 +57,10 @@ def _construct_unique_mapping(
 
     for key_node, value_node in node.value:
         key = loader.construct_object(key_node, deep=deep)
+        try:
+            hash(key)
+        except TypeError as exc:
+            raise UserInputError(f"Invalid YAML key: {key}") from exc
         if key in mapping:
             raise UserInputError(f"Duplicate YAML key: {key}")
         mapping[key] = loader.construct_object(value_node, deep=deep)

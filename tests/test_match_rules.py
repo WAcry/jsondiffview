@@ -51,14 +51,15 @@ def test_build_match_rule_set_preserves_yaml_and_cli_priority_data():
     assert rules.cli_global_keys == ["id"]
 
 
-def test_build_match_rule_set_rejects_numeric_path_segments():
+def test_build_match_rule_set_allows_numeric_literal_path_segments():
     config = MatchConfig(
         global_matches=[],
-        path_matches={"countries.0.cities": [["id"]]},
+        path_matches={"reports.2024.items": [["id"]]},
     )
 
-    with pytest.raises(UserInputError, match="countries.0.cities"):
-        build_match_rule_set([], config)
+    rules = build_match_rule_set([], config)
+
+    assert rules.yaml_path_keys["reports.2024.items"] == [["id"]]
 
 
 def test_build_match_rule_set_rejects_indexed_path_syntax():
