@@ -90,3 +90,23 @@ def test_build_match_rule_set_rejects_wildcard_prefixed_literal_segment():
 
     with pytest.raises(UserInputError, match="countries\\.\\*foo\\.cities"):
         build_match_rule_set([], config)
+
+
+def test_build_match_rule_set_rejects_wildcard_only_path():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={"*": [["id"]]},
+    )
+
+    with pytest.raises(UserInputError, match="\\*"):
+        build_match_rule_set([], config)
+
+
+def test_build_match_rule_set_rejects_terminal_wildcard_segment():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={"countries.*": [["id"]]},
+    )
+
+    with pytest.raises(UserInputError, match="countries\\.\\*"):
+        build_match_rule_set([], config)

@@ -114,8 +114,12 @@ def _validate_rule_path(path: str) -> None:
     if any(segment == "" for segment in segments):
         raise UserInputError(f"Invalid match path: {path}")
 
-    for segment in segments:
+    for index, segment in enumerate(segments):
         if segment == "*":
+            if index == 0 or index == len(segments) - 1:
+                raise UserInputError(f"Invalid match path: {path}")
+            if segments[index - 1] == "*" or segments[index + 1] == "*":
+                raise UserInputError(f"Invalid match path: {path}")
             continue
         if "*" in segment:
             raise UserInputError(f"Invalid match path: {path}")
