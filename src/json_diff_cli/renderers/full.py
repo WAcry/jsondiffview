@@ -92,7 +92,7 @@ def _render_plain_object(
         child_lines = _attach_object_field(key, child_lines, indent=child_indent)
         if index < len(keys) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(child_lines)
+        lines.extend(_strip_block_breaks(child_lines))
 
     lines.append(f"{indent_text(indent)}}}")
     return lines
@@ -115,7 +115,7 @@ def _render_plain_array(
         child_lines = _attach_array_item(child_lines, indent=child_indent)
         if index < len(value) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(child_lines)
+        lines.extend(_strip_block_breaks(child_lines))
 
     lines.append(f"{indent_text(indent)}]")
     return lines
@@ -145,7 +145,7 @@ def _render_object_node(
         child_lines = _attach_object_field(key, child_lines, indent=child_indent)
         if index < len(keys) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(child_lines)
+        lines.extend(_strip_block_breaks(child_lines))
 
     lines.append(f"{indent_text(indent)}}}")
     return lines
@@ -174,7 +174,7 @@ def _render_array_node(
         child_lines = _attach_array_item(child_lines, indent=child_indent)
         if index < len(node.children) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(child_lines)
+        lines.extend(_strip_block_breaks(child_lines))
 
     lines.append(f"{indent_text(indent)}]")
     return lines
@@ -239,3 +239,7 @@ def _append_suffix_to_blocks(lines: list[str], suffix: str) -> list[str]:
         updated[block_end] = f"{updated[block_end]}{suffix}"
 
     return updated
+
+
+def _strip_block_breaks(lines: list[str]) -> list[str]:
+    return [line for line in lines if line != _BLOCK_BREAK]

@@ -134,3 +134,14 @@ def test_full_renderer_separates_array_replacement_halves_with_commas():
     assert lines[1].strip() == "[-1-],"
     assert lines[4].strip() == "]+],"
     assert lines[5].strip() == "9"
+
+
+def test_full_renderer_does_not_repeat_parent_prefix_inside_nested_replacement():
+    rendered = render_full(
+        diff_node_for({"a": [1, 2]}, {"a": [1, {"x": 2}]}),
+        color="never",
+    )
+
+    assert rendered.count('"a": ') == 1
+    assert '    [+{' in rendered
+    assert '  "a":   [+{' not in rendered
