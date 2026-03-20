@@ -151,7 +151,7 @@ def _split_rule_path_segments(path: str) -> list[tuple[str, bool]]:
                 (_decode_rule_literal_segment(path[index + 1 : close_index], path), True)
             )
             index = close_index + 1
-            if index < len(path) and path[index] != ".":
+            if index < len(path) and path[index] not in ".[":
                 raise UserInputError(f"Invalid match path: {path}")
             if index < len(path) and path[index] == ".":
                 index += 1

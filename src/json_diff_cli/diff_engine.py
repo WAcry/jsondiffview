@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 
+from .path_syntax import append_object_path
 from .types import DiffKind, DiffNode, JsonValue
 
 
@@ -96,12 +96,7 @@ def _diff_array(path: str, left: list[JsonValue], right: list[JsonValue]) -> Dif
 
 
 def _append_object_path(base_path: str, key: str) -> str:
-    if _needs_path_escape(key):
-        escaped_key = json.dumps(key, ensure_ascii=False)
-        return f"{base_path}[{escaped_key}]" if base_path else f"[{escaped_key}]"
-    if not base_path:
-        return key
-    return f"{base_path}.{key}"
+    return append_object_path(base_path, key)
 
 
 def _append_array_path(base_path: str, index: int) -> str:
@@ -165,7 +160,3 @@ def _iter_object_keys(
             ordered_keys.append(key)
 
     return ordered_keys
-
-
-def _needs_path_escape(key: str) -> bool:
-    return not key.isidentifier()

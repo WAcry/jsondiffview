@@ -88,6 +88,20 @@ def test_escaped_literal_object_key_path_matches_yaml_rule():
     ) == ["id"]
 
 
+def test_adjacent_escaped_object_key_path_matches_yaml_rule():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={'["a.b"]["c d"].cities': [["id"]]},
+    )
+
+    assert resolve_object_key_rule(
+        '["a.b"]["c d"].cities',
+        [{"id": 1}],
+        rules,
+    ) == ["id"]
+
+
 def test_wildcard_yaml_path_rule_does_not_match_literal_wildcard_object_key():
     rules = MatchRuleSet(
         cli_global_keys=[],
@@ -162,6 +176,24 @@ def test_canonical_object_path_supports_composite_keys():
     )
 
     assert path == 'countries[iso2="AR",name="Argentina"].capital'
+
+
+@pytest.mark.parametrize(
+    ("child_key", "expected_path"),
+    [
+        ("a.b", 'countries[id=1]["a.b"]'),
+        ("c d", 'countries[id=1]["c d"]'),
+        ("*", 'countries[id=1]["*"]'),
+        ("", 'countries[id=1][""]'),
+    ],
+)
+def test_canonical_object_path_escapes_ambiguous_child_keys(
+    child_key: str,
+    expected_path: str,
+):
+    path = canonical_object_path("countries", ["id"], [1], child_key)
+
+    assert path == expected_path
 
 
 def test_canonical_primitive_path_renders_json_literal_with_occurrence():

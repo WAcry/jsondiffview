@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 
 from .errors import UserInputError
+from .path_syntax import append_object_path
 from .types import MatchRuleSet
 
 
@@ -150,7 +151,7 @@ def _split_rule_path(path: str) -> list[_PathSegment]:
                 _PathSegment(value=literal_segment, is_quoted_literal=True)
             )
             index = close_index + 1
-            if index < len(path) and path[index] != ".":
+            if index < len(path) and path[index] not in ".[":
                 raise UserInputError(f"Invalid match path: {path}")
             if index < len(path) and path[index] == ".":
                 index += 1
@@ -267,8 +268,6 @@ def _is_json_scalar(value: object) -> bool:
 
 
 def _append_child_path(base_path: str, child_key: str | None) -> str:
-    if not child_key:
+    if child_key is None:
         return base_path
-    if not base_path:
-        return child_key
-    return f"{base_path}.{child_key}"
+    return append_object_path(base_path, child_key)
