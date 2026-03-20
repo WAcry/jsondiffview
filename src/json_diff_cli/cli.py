@@ -90,5 +90,10 @@ def _render_output(
     sort_keys: bool,
 ) -> str:
     if view == "focused":
-        return render_focused(diff, color=color, context_lines=context_lines)
+        return render_focused(
+            diff,
+            color=color,
+            context_lines=context_lines,
+            sort_keys=sort_keys,
+        )
     return render_full(diff, color=color, sort_keys=sort_keys)

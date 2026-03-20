@@ -4,10 +4,21 @@ from ..types import DiffKind, DiffNode
 from .full import render_full
 
 
-def render_focused(node: DiffNode, *, color: str, context_lines: int) -> str:
+def render_focused(
+    node: DiffNode,
+    *,
+    color: str,
+    context_lines: int,
+    sort_keys: bool = False,
+) -> str:
     blocks = _collect_focused_blocks(node, context_lines=context_lines)
     return "\n\n".join(
-        _render_block(block, color=color, context_lines=context_lines)
+        _render_block(
+            block,
+            color=color,
+            context_lines=context_lines,
+            sort_keys=sort_keys,
+        )
         for block in blocks
     )
 
@@ -45,9 +56,15 @@ def _has_multiple_direct_changes(node: DiffNode) -> bool:
     return changed_children >= 2
 
 
-def _render_block(node: DiffNode, *, color: str, context_lines: int) -> str:
-    marker_lines = render_full(node, color="never").splitlines()
-    rendered_lines = render_full(node, color=color).splitlines()
+def _render_block(
+    node: DiffNode,
+    *,
+    color: str,
+    context_lines: int,
+    sort_keys: bool,
+) -> str:
+    marker_lines = render_full(node, color="never", sort_keys=sort_keys).splitlines()
+    rendered_lines = render_full(node, color=color, sort_keys=sort_keys).splitlines()
 
     if node.kind in (DiffKind.OBJECT, DiffKind.ARRAY):
         rendered_lines = _select_context_lines(

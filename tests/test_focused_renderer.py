@@ -43,3 +43,17 @@ def test_focused_renderer_unions_context_windows():
     assert '"a": [-1-][+9+],' in blocks[0]
     assert '"b": 2,' in blocks[0]
     assert '"c": [-3-][+8+],' in blocks[0]
+
+
+def test_focused_renderer_sort_keys_reorders_focused_block_fields():
+    rendered = render_focused(
+        diff_node_for(
+            {"b": 1, "a": 2},
+            {"b": 3, "a": 4},
+        ),
+        color="never",
+        context_lines=1,
+        sort_keys=True,
+    )
+
+    assert rendered.index('"a": [-2-][+4+],') < rendered.index('"b": [-1-][+3+]')
