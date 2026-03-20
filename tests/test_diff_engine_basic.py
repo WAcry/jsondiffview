@@ -53,6 +53,24 @@ def test_object_path_escapes_ambiguous_key_segments():
     assert node.children["a.b[c]"].path == '["a.b[c]"]'
 
 
+def test_equal_object_comparison_keeps_nested_bool_number_distinction():
+    node = diff_values("", {"x": 1}, {"x": True})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children["x"].kind is DiffKind.REPLACED
+    assert node.children["x"].left == 1
+    assert node.children["x"].right is True
+
+
+def test_equal_array_comparison_keeps_nested_bool_number_distinction():
+    node = diff_values("values", [1], [True])
+
+    assert node.kind is DiffKind.ARRAY
+    assert node.children[0].kind is DiffKind.REPLACED
+    assert node.children[0].left == 1
+    assert node.children[0].right is True
+
+
 def test_positional_array_replacement_uses_numeric_index_path():
     node = diff_values("languages", ["es", "en"], ["es", "fr"])
 

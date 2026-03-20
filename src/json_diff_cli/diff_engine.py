@@ -114,9 +114,21 @@ def _is_list(value: JsonValue) -> bool:
 
 def _json_values_equal(left: JsonValue, right: JsonValue) -> bool:
     if isinstance(left, Mapping) and isinstance(right, Mapping):
-        return dict(left) == dict(right)
+        if len(left) != len(right):
+            return False
+        for key, left_value in left.items():
+            if key not in right:
+                return False
+            if not _json_values_equal(left_value, right[key]):
+                return False
+        return True
     if _is_list(left) and _is_list(right):
-        return list(left) == list(right)
+        if len(left) != len(right):
+            return False
+        return all(
+            _json_values_equal(left_item, right_item)
+            for left_item, right_item in zip(left, right)
+        )
     if left is right:
         return True
     if isinstance(left, bool) != isinstance(right, bool):
