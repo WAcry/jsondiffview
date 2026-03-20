@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..types import DiffKind, DiffNode
+from .common import ordered_child_keys
 from .full import render_full
 
 
@@ -11,7 +12,7 @@ def render_focused(
     context_lines: int,
     sort_keys: bool = False,
 ) -> str:
-    blocks = _collect_focused_blocks(node, context_lines=context_lines)
+    blocks = _collect_focused_blocks(node, sort_keys=sort_keys)
     return "\n\n".join(
         _render_block(
             block,
@@ -26,7 +27,7 @@ def render_focused(
 def _collect_focused_blocks(
     node: DiffNode,
     *,
-    context_lines: int,
+    sort_keys: bool,
 ) -> list[DiffNode]:
     if node.kind in (DiffKind.ADDED, DiffKind.REMOVED, DiffKind.REPLACED):
         return [node]
@@ -34,26 +35,15 @@ def _collect_focused_blocks(
     if node.kind is DiffKind.UNCHANGED:
         return []
 
-    if context_lines > 0 and _has_multiple_direct_changes(node):
-        return [node]
-
-    children = node.children.values() if isinstance(node.children, dict) else node.children
     blocks: list[DiffNode] = []
-    for child in children:
-        blocks.extend(_collect_focused_blocks(child, context_lines=context_lines))
-    return blocks
-
-
-def _has_multiple_direct_changes(node: DiffNode) -> bool:
     if isinstance(node.children, dict):
-        changed_children = sum(
-            1 for child in node.children.values() if child.kind is not DiffKind.UNCHANGED
-        )
-    else:
-        changed_children = sum(
-            1 for child in node.children if child.kind is not DiffKind.UNCHANGED
-        )
-    return changed_children >= 2
+        for key in ordered_child_keys(node.children, sort_keys=sort_keys):
+            blocks.extend(_collect_focused_blocks(node.children[key], sort_keys=sort_keys))
+        return blocks
+
+    for child in node.children:
+        blocks.extend(_collect_focused_blocks(child, sort_keys=sort_keys))
+    return blocks
 
 
 def _render_block(
@@ -63,15 +53,12 @@ def _render_block(
     context_lines: int,
     sort_keys: bool,
 ) -> str:
-    marker_lines = render_full(node, color="never", sort_keys=sort_keys).splitlines()
     rendered_lines = render_full(node, color=color, sort_keys=sort_keys).splitlines()
-
-    if node.kind in (DiffKind.OBJECT, DiffKind.ARRAY):
-        rendered_lines = _select_context_lines(
-            rendered_lines,
-            marker_lines=marker_lines,
-            context_lines=context_lines,
-        )
+    rendered_lines = _select_context_lines(
+        rendered_lines,
+        changed_indexes=_changed_line_indexes(node, rendered_lines),
+        context_lines=context_lines,
+    )
 
     if not rendered_lines:
         return node.path
@@ -81,12 +68,9 @@ def _render_block(
 def _select_context_lines(
     rendered_lines: list[str],
     *,
-    marker_lines: list[str],
+    changed_indexes: list[int],
     context_lines: int,
 ) -> list[str]:
-    changed_indexes = [
-        index for index, line in enumerate(marker_lines) if _line_contains_change_marker(line)
-    ]
     if not changed_indexes:
         return rendered_lines
 
@@ -127,5 +111,7 @@ def _merge_windows(windows: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return merged
 
 
-def _line_contains_change_marker(line: str) -> bool:
-    return "[+" in line or "[-" in line or "+]" in line or "-]" in line
+def _changed_line_indexes(node: DiffNode, rendered_lines: list[str]) -> list[int]:
+    if not rendered_lines:
+        return []
+    return list(range(len(rendered_lines)))

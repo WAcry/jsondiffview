@@ -55,4 +55,4 @@ def test_cli_honors_sort_keys_in_focused_mode(tmp_path):
     )
 
     assert result.returncode == 1
-    assert result.stdout.index('"a": [-2-][+4+],') < result.stdout.index('"b": [-1-][+3+]')
+    assert result.stdout.index("a\n[-2-][+4+]") < result.stdout.index("b\n[-1-][+3+]")

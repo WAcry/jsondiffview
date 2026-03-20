@@ -1,5 +1,5 @@
 from json_diff_cli.diff_engine import diff_values
-from json_diff_cli.renderers.focused import render_focused
+from json_diff_cli.renderers.focused import render_focused, _select_context_lines
 
 
 def diff_node_for(left, right):
@@ -26,11 +26,11 @@ def test_focused_renderer_emits_only_leaf_replacements_and_added_subtrees():
     assert '"population"' not in blocks[1]
 
 
-def test_focused_renderer_unions_context_windows():
+def test_focused_renderer_keeps_leaf_scoped_blocks_with_context_lines():
     rendered = render_focused(
         diff_node_for(
-            {"a": 1, "b": 2, "c": 3, "d": 4},
-            {"a": 9, "b": 2, "c": 8, "d": 4},
+            {"demographics": {"population": 1}},
+            {"demographics": {"population": 2, "timezone": [-4, -3]}},
         ),
         color="never",
         context_lines=1,
@@ -38,11 +38,11 @@ def test_focused_renderer_unions_context_windows():
 
     blocks = rendered.split("\n\n")
 
-    assert len(blocks) == 1
-    assert blocks[0].splitlines()[0] == ""
-    assert '"a": [-1-][+9+],' in blocks[0]
-    assert '"b": 2,' in blocks[0]
-    assert '"c": [-3-][+8+],' in blocks[0]
+    assert len(blocks) == 2
+    assert blocks[0].splitlines()[0] == "demographics.population"
+    assert blocks[1].splitlines()[0] == "demographics.timezone"
+    assert blocks[0].splitlines()[0] != "demographics"
+    assert blocks[1].splitlines()[0] != "demographics"
 
 
 def test_focused_renderer_sort_keys_reorders_focused_block_fields():
@@ -56,14 +56,14 @@ def test_focused_renderer_sort_keys_reorders_focused_block_fields():
         sort_keys=True,
     )
 
-    assert rendered.index('"a": [-2-][+4+],') < rendered.index('"b": [-1-][+3+]')
+    assert rendered.index("a\n[-2-][+4+]") < rendered.index("b\n[-1-][+3+]")
 
 
 def test_focused_renderer_preserves_object_closing_delimiter_with_context_lines():
     rendered = render_focused(
         diff_node_for(
-            {"a": 1, "b": 2, "c": 3, "d": 4},
-            {"a": 9, "b": 8, "c": 3, "d": 4},
+            {"unchanged": 1},
+            {"unchanged": 1, "details": {"a": 1, "b": 2}},
         ),
         color="never",
         context_lines=1,
@@ -71,16 +71,16 @@ def test_focused_renderer_preserves_object_closing_delimiter_with_context_lines(
 
     lines = rendered.splitlines()
 
-    assert lines[0] == ""
-    assert lines[1] == "{"
-    assert lines[-1] == "}"
+    assert lines[0] == "details"
+    assert lines[1] == "[+{"
+    assert lines[-1] == "}+]"
 
 
 def test_focused_renderer_preserves_array_closing_delimiter_with_context_lines():
     rendered = render_focused(
         diff_node_for(
-            [1, 2, 3, 4],
-            [9, 8, 3, 4],
+            {"unchanged": 1},
+            {"unchanged": 1, "items": [1, 2, 3]},
         ),
         color="never",
         context_lines=1,
@@ -88,6 +88,26 @@ def test_focused_renderer_preserves_array_closing_delimiter_with_context_lines()
 
     lines = rendered.splitlines()
 
-    assert lines[0] == ""
-    assert lines[1] == "["
-    assert lines[-1] == "]"
+    assert lines[0] == "items"
+    assert lines[1] == "[+["
+    assert lines[-1] == "]+]"
+
+
+def test_select_context_lines_ignores_unchanged_literal_marker_strings():
+    selected = _select_context_lines(
+        [
+            "{",
+            '  "note": "[+literal+]",',
+            '  "value": [-1-][+2+],',
+            '  "tail": 3',
+            "}",
+        ],
+        changed_indexes=[2],
+        context_lines=0,
+    )
+
+    assert selected == [
+        "{",
+        '  "value": [-1-][+2+],',
+        "}",
+    ]
