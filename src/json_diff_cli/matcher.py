@@ -22,18 +22,22 @@ def resolve_object_key_rule(
     items: list[object],
     rules: MatchRuleSet,
 ) -> list[str] | None:
-    candidate_groups = (
-        _lookup_yaml_path_candidates(array_path, rules.yaml_path_keys),
-        rules.yaml_global_keys,
-        [[key] for key in rules.cli_global_keys],
-    )
-
-    for candidates in candidate_groups:
-        resolved = _first_applicable_candidate(candidates or [], items)
-        if resolved is not None:
-            return resolved
+    for candidate in object_key_candidates(array_path, rules):
+        if _candidate_applies(candidate, items):
+            return list(candidate)
 
     return None
+
+
+def object_key_candidates(
+    array_path: str,
+    rules: MatchRuleSet,
+) -> list[list[str]]:
+    candidates: list[list[str]] = []
+    candidates.extend(_lookup_yaml_path_candidates(array_path, rules.yaml_path_keys) or [])
+    candidates.extend(list(group) for group in rules.yaml_global_keys)
+    candidates.extend([[key] for key in rules.cli_global_keys])
+    return candidates
 
 
 def canonical_object_path(
@@ -58,6 +62,19 @@ def canonical_primitive_path(array_path: str, value: object, occurrence: int) ->
     if occurrence < 0:
         raise UserInputError("Primitive identity occurrence must be non-negative")
     return f"{array_path}[value={_format_primitive_value(value)}#{occurrence}]"
+
+
+def build_object_identity(
+    item: Mapping[str, object],
+    keys: Sequence[str],
+) -> tuple[tuple[str, object], ...]:
+    identity: list[tuple[str, object]] = []
+    for key in keys:
+        value = _resolve_dotted_key(item, key)
+        if not _is_json_scalar(value):
+            raise UserInputError(f"Match key '{key}' must resolve to a scalar")
+        identity.append((key, value))
+    return tuple(identity)
 
 
 def _lookup_yaml_path_candidates(
@@ -111,6 +128,15 @@ def _has_dotted_key(value: Mapping[str, object], dotted_key: str) -> bool:
             return False
         current = current[segment]
     return True
+
+
+def _resolve_dotted_key(value: Mapping[str, object], dotted_key: str) -> object:
+    current: object = value
+    for segment in dotted_key.split("."):
+        if not isinstance(current, Mapping) or segment not in current:
+            raise UserInputError(f"Missing match key '{dotted_key}'")
+        current = current[segment]
+    return current
 
 
 def _path_pattern_matches(
