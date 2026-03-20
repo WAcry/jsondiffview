@@ -54,6 +54,18 @@ def test_invalid_yaml_raises_user_input_error(tmp_path):
         load_match_config(path)
 
 
+def test_duplicate_yaml_keys_raise_user_input_error(tmp_path):
+    path = tmp_path / "match.yaml"
+    path.write_text(
+        "global_matches:\n  - id\npath_matches:\n  countries:\n    - id\npath_matches:\n"
+        "  cities:\n    - name\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(UserInputError, match="Duplicate YAML key"):
+        load_match_config(path)
+
+
 def test_invalid_match_config_shape_raises_user_input_error(tmp_path):
     path = tmp_path / "match.yaml"
     path.write_text("global_matches: id\n", encoding="utf-8")

@@ -117,6 +117,8 @@ def _validate_rule_path(path: str) -> None:
     for segment in segments:
         if segment == "*":
             continue
+        if "*" in segment:
+            raise UserInputError(f"Invalid match path: {path}")
         if "[" in segment or "]" in segment:
             raise UserInputError(f"Invalid match path: {path}")
         if segment.isdigit():

@@ -69,3 +69,23 @@ def test_build_match_rule_set_rejects_indexed_path_syntax():
 
     with pytest.raises(UserInputError, match="countries\\[0\\]\\.cities"):
         build_match_rule_set([], config)
+
+
+def test_build_match_rule_set_rejects_wildcard_inside_literal_segment():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={"countries*.cities": [["id"]]},
+    )
+
+    with pytest.raises(UserInputError, match="countries\\*\\.cities"):
+        build_match_rule_set([], config)
+
+
+def test_build_match_rule_set_rejects_wildcard_prefixed_literal_segment():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={"countries.*foo.cities": [["id"]]},
+    )
+
+    with pytest.raises(UserInputError, match="countries\\.\\*foo\\.cities"):
+        build_match_rule_set([], config)
