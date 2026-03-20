@@ -129,9 +129,7 @@ def _split_runtime_path(path: str) -> list[str]:
             if buffer:
                 segments.append("".join(buffer))
                 buffer.clear()
-            close_index = path.find("]", index)
-            if close_index == -1:
-                raise UserInputError(f"Invalid runtime path: {path}")
+            close_index = _find_selector_end(path, index)
             segments.append(path[index + 1 : close_index])
             index = close_index + 1
             continue
@@ -142,6 +140,31 @@ def _split_runtime_path(path: str) -> list[str]:
         segments.append("".join(buffer))
 
     return segments
+
+
+def _find_selector_end(path: str, start_index: int) -> int:
+    in_string = False
+    is_escaped = False
+    index = start_index + 1
+
+    while index < len(path):
+        char = path[index]
+
+        if in_string:
+            if is_escaped:
+                is_escaped = False
+            elif char == "\\":
+                is_escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char == "]":
+            return index
+
+        index += 1
+
+    raise UserInputError(f"Invalid runtime path: {path}")
 
 
 def _format_identity_value(key: str, value: object) -> str:
