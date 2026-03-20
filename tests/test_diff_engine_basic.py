@@ -53,6 +53,21 @@ def test_object_path_escapes_ambiguous_key_segments():
     assert node.children["a.b[c]"].path == '["a.b[c]"]'
 
 
+def test_object_path_escapes_empty_key_at_root():
+    node = diff_values("", {"": 1}, {"": 2})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children[""].path == '[""]'
+
+
+def test_object_path_escapes_empty_key_under_parent():
+    node = diff_values("", {"parent": {"": 1}}, {"parent": {"": 2}})
+
+    assert node.kind is DiffKind.OBJECT
+    assert node.children["parent"].kind is DiffKind.OBJECT
+    assert node.children["parent"].children[""].path == 'parent[""]'
+
+
 def test_equal_object_comparison_keeps_nested_bool_number_distinction():
     node = diff_values("", {"x": 1}, {"x": True})
 
