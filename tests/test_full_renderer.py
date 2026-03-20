@@ -1,5 +1,7 @@
 import sys
 
+import pytest
+
 from json_diff_cli.diff_engine import diff_values
 from json_diff_cli.renderers.full import render_full
 
@@ -103,3 +105,8 @@ def test_full_renderer_preserves_array_item_structure_for_nested_replacement():
     assert lines[2].strip() == "[+["
     assert lines[3].strip() == "[]"
     assert lines[4].strip() == "]+]"
+
+
+def test_full_renderer_rejects_invalid_color_for_unchanged_diff():
+    with pytest.raises(ValueError, match="Unsupported color mode: bogus"):
+        render_full(diff_values("", 1, 1), color="bogus")

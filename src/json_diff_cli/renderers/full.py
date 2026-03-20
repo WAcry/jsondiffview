@@ -10,6 +10,7 @@ from .common import (
     json_text,
     ordered_child_keys,
     ordered_object_keys,
+    resolve_color_mode,
     strip_indent,
     wrap_added_lines,
     wrap_removed_lines,
@@ -19,6 +20,7 @@ _BLOCK_BREAK = "\0BLOCK_BREAK\0"
 
 
 def render_full(node: DiffNode, *, color: str, sort_keys: bool = False) -> str:
+    resolve_color_mode(color)
     return "\n".join(
         line
         for line in _render_node_lines(node, indent=0, color=color, sort_keys=sort_keys)
