@@ -103,6 +103,10 @@ def _select_context_lines(
     selected: list[str] = []
     for start, end in windows:
         selected.extend(rendered_lines[start : end + 1])
+    if windows[0][0] > 0:
+        selected.insert(0, rendered_lines[0])
+    if windows[-1][1] < len(rendered_lines) - 1:
+        selected.append(rendered_lines[-1])
     return selected
 
 

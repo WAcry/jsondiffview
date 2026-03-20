@@ -57,3 +57,37 @@ def test_focused_renderer_sort_keys_reorders_focused_block_fields():
     )
 
     assert rendered.index('"a": [-2-][+4+],') < rendered.index('"b": [-1-][+3+]')
+
+
+def test_focused_renderer_preserves_object_closing_delimiter_with_context_lines():
+    rendered = render_focused(
+        diff_node_for(
+            {"a": 1, "b": 2, "c": 3, "d": 4},
+            {"a": 9, "b": 8, "c": 3, "d": 4},
+        ),
+        color="never",
+        context_lines=1,
+    )
+
+    lines = rendered.splitlines()
+
+    assert lines[0] == ""
+    assert lines[1] == "{"
+    assert lines[-1] == "}"
+
+
+def test_focused_renderer_preserves_array_closing_delimiter_with_context_lines():
+    rendered = render_focused(
+        diff_node_for(
+            [1, 2, 3, 4],
+            [9, 8, 3, 4],
+        ),
+        color="never",
+        context_lines=1,
+    )
+
+    lines = rendered.splitlines()
+
+    assert lines[0] == ""
+    assert lines[1] == "["
+    assert lines[-1] == "]"
