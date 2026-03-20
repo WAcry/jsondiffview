@@ -62,6 +62,17 @@ def test_build_match_rule_set_allows_numeric_literal_path_segments():
     assert rules.yaml_path_keys["reports.2024.items"] == [["id"]]
 
 
+def test_build_match_rule_set_accepts_escaped_literal_object_key_path_segments():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={'parent["a.b"].cities': [["id"]]},
+    )
+
+    rules = build_match_rule_set([], config)
+
+    assert rules.yaml_path_keys['parent["a.b"].cities'] == [["id"]]
+
+
 def test_build_match_rule_set_rejects_indexed_path_syntax():
     config = MatchConfig(
         global_matches=[],

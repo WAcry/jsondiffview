@@ -74,6 +74,34 @@ def test_wildcard_yaml_path_rule_matches_selector_value_containing_closing_brack
     ) == ["id"]
 
 
+def test_escaped_literal_object_key_path_matches_yaml_rule():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={'parent["a.b"].cities': [["id"]]},
+    )
+
+    assert resolve_object_key_rule(
+        'parent["a.b"].cities',
+        [{"id": 1}],
+        rules,
+    ) == ["id"]
+
+
+def test_runtime_escaped_numeric_object_key_matches_literal_yaml_path_segment():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={"reports.2024.items": [["id"]]},
+    )
+
+    assert resolve_object_key_rule(
+        'reports["2024"].items',
+        [{"id": 1}],
+        rules,
+    ) == ["id"]
+
+
 def test_dotted_key_path_is_allowed_in_yaml_rule_and_preserved():
     rules = MatchRuleSet(
         cli_global_keys=[],

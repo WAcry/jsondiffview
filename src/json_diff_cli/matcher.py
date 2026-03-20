@@ -94,20 +94,65 @@ def _has_dotted_key(value: Mapping[str, object], dotted_key: str) -> bool:
     return True
 
 
-def _path_pattern_matches(pattern_segments: list[str], runtime_segments: list[str]) -> bool:
+def _path_pattern_matches(
+    pattern_segments: list[tuple[str, bool]],
+    runtime_segments: list[str],
+) -> bool:
     if len(pattern_segments) != len(runtime_segments):
         return False
 
     for pattern_segment, runtime_segment in zip(pattern_segments, runtime_segments):
-        if pattern_segment != "*" and pattern_segment != runtime_segment:
+        if pattern_segment[1]:
+            continue
+        if pattern_segment[0] != runtime_segment:
             return False
     return True
 
 
-def _split_rule_path(path: str) -> list[str]:
+def _split_rule_path(path: str) -> list[tuple[str, bool]]:
     if not path:
         return []
-    return path.split(".")
+
+    segments: list[tuple[str, bool]] = []
+    buffer: list[str] = []
+    index = 0
+    while index < len(path):
+        char = path[index]
+        if char == ".":
+            if not buffer:
+                raise UserInputError(f"Invalid match path: {path}")
+            segments.append(("".join(buffer), "".join(buffer) == "*"))
+            buffer.clear()
+            index += 1
+            continue
+        if char == "[":
+            if buffer:
+                segments.append(("".join(buffer), "".join(buffer) == "*"))
+                buffer.clear()
+            close_index = _find_selector_end(path, index)
+            literal_segment = _decode_rule_literal_segment(
+                path[index + 1 : close_index],
+                path,
+            )
+            segments.append((literal_segment, False))
+            index = close_index + 1
+            if index < len(path) and path[index] != ".":
+                raise UserInputError(f"Invalid match path: {path}")
+            if index < len(path) and path[index] == ".":
+                index += 1
+                if index == len(path):
+                    raise UserInputError(f"Invalid match path: {path}")
+            continue
+        buffer.append(char)
+        index += 1
+
+    if buffer:
+        token = "".join(buffer)
+        segments.append((token, token == "*"))
+    elif path.endswith("."):
+        raise UserInputError(f"Invalid match path: {path}")
+
+    return segments
 
 
 def _split_runtime_path(path: str) -> list[str]:
@@ -130,7 +175,9 @@ def _split_runtime_path(path: str) -> list[str]:
                 segments.append("".join(buffer))
                 buffer.clear()
             close_index = _find_selector_end(path, index)
-            segments.append(path[index + 1 : close_index])
+            segments.append(
+                _decode_runtime_bracket_segment(path[index + 1 : close_index])
+            )
             index = close_index + 1
             continue
         buffer.append(char)
@@ -165,6 +212,30 @@ def _find_selector_end(path: str, start_index: int) -> int:
         index += 1
 
     raise UserInputError(f"Invalid runtime path: {path}")
+
+
+def _decode_rule_literal_segment(raw_segment: str, rule_path: str) -> str:
+    decoded = _decode_json_string_segment(raw_segment)
+    if decoded is None:
+        raise UserInputError(f"Invalid match path: {rule_path}")
+    return decoded
+
+
+def _decode_runtime_bracket_segment(raw_segment: str) -> str:
+    decoded = _decode_json_string_segment(raw_segment)
+    if decoded is not None:
+        return decoded
+    return raw_segment
+
+
+def _decode_json_string_segment(raw_segment: str) -> str | None:
+    try:
+        decoded = json.loads(raw_segment)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(decoded, str):
+        return None
+    return decoded
 
 
 def _format_identity_value(key: str, value: object) -> str:
