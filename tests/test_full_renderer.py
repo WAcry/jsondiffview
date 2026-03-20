@@ -186,3 +186,23 @@ def test_full_renderer_auto_non_tty_formats_multiline_replacement_cleanly(monkey
     assert '"x": -1' in rendered
     assert '"x": +{' in rendered
     assert '+ "a": 2' not in rendered
+
+
+def test_full_renderer_auto_non_tty_separates_multiline_replacement_halves(monkeypatch):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    rendered = render_full(
+        diff_node_for({"x": {"a": 1}}, {"x": [1, 2]}),
+        color="auto",
+    )
+
+    assert '\n\n  "x": +[' in rendered
+
+
+def test_full_renderer_always_separates_multiline_replacement_halves():
+    rendered = render_full(
+        diff_node_for({"x": {"a": 1}}, {"x": [1, 2]}),
+        color="always",
+    )
+
+    assert '\n\n  "x": \x1b[32m[\x1b[0m' in rendered

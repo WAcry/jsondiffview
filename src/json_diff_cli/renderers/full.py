@@ -20,11 +20,13 @@ _BLOCK_BREAK = "\0BLOCK_BREAK\0"
 
 
 def render_full(node: DiffNode, *, color: str, sort_keys: bool = False) -> str:
-    resolve_color_mode(color)
+    color_mode = resolve_color_mode(color)
     return "\n".join(
         line
-        for line in _render_node_lines(node, indent=0, color=color, sort_keys=sort_keys)
-        if line != _BLOCK_BREAK
+        for line in _materialize_block_breaks(
+            _render_node_lines(node, indent=0, color=color, sort_keys=sort_keys),
+            color_mode=color_mode,
+        )
     )
 
 
@@ -92,7 +94,7 @@ def _render_plain_object(
         child_lines = _attach_object_field(key, child_lines, indent=child_indent)
         if index < len(keys) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(_strip_block_breaks(child_lines))
+        lines.extend(_materialize_block_breaks(child_lines, color_mode="markers"))
 
     lines.append(f"{indent_text(indent)}}}")
     return lines
@@ -115,7 +117,7 @@ def _render_plain_array(
         child_lines = _attach_array_item(child_lines, indent=child_indent)
         if index < len(value) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(_strip_block_breaks(child_lines))
+        lines.extend(_materialize_block_breaks(child_lines, color_mode="markers"))
 
     lines.append(f"{indent_text(indent)}]")
     return lines
@@ -131,6 +133,7 @@ def _render_object_node(
     if not isinstance(node.children, dict) or not node.children:
         return [f"{indent_text(indent)}{{}}"]
 
+    color_mode = resolve_color_mode(color)
     keys = ordered_child_keys(node.children, sort_keys=sort_keys)
     lines = [f"{indent_text(indent)}{{"]
     child_indent = indent + 1
@@ -145,7 +148,7 @@ def _render_object_node(
         child_lines = _attach_object_field(key, child_lines, indent=child_indent)
         if index < len(keys) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(_strip_block_breaks(child_lines))
+        lines.extend(_materialize_block_breaks(child_lines, color_mode=color_mode))
 
     lines.append(f"{indent_text(indent)}}}")
     return lines
@@ -161,6 +164,7 @@ def _render_array_node(
     if not node.children:
         return [f"{indent_text(indent)}[]"]
 
+    color_mode = resolve_color_mode(color)
     lines = [f"{indent_text(indent)}["]
     child_indent = indent + 1
 
@@ -174,7 +178,7 @@ def _render_array_node(
         child_lines = _attach_array_item(child_lines, indent=child_indent)
         if index < len(node.children) - 1:
             child_lines = _append_suffix_to_blocks(child_lines, ",")
-        lines.extend(_strip_block_breaks(child_lines))
+        lines.extend(_materialize_block_breaks(child_lines, color_mode=color_mode))
 
     lines.append(f"{indent_text(indent)}]")
     return lines
@@ -241,5 +245,7 @@ def _append_suffix_to_blocks(lines: list[str], suffix: str) -> list[str]:
     return updated
 
 
-def _strip_block_breaks(lines: list[str]) -> list[str]:
-    return [line for line in lines if line != _BLOCK_BREAK]
+def _materialize_block_breaks(lines: list[str], *, color_mode: str) -> list[str]:
+    if color_mode == "markers":
+        return [line for line in lines if line != _BLOCK_BREAK]
+    return ["" if line == _BLOCK_BREAK else line for line in lines]
