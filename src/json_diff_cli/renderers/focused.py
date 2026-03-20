@@ -89,6 +89,8 @@ def _render_block(
 
     if not rendered_lines:
         return block.node.path
+    if not block.node.path:
+        return "\n".join(rendered_lines)
     return f"{block.node.path}\n" + "\n".join(rendered_lines)
 
 

@@ -6,6 +6,16 @@ def diff_node_for(left, right):
     return diff_values("", left, right)
 
 
+def test_focused_renderer_omits_empty_root_heading_for_top_level_scalar_diff():
+    rendered = render_focused(
+        diff_node_for(1, 2),
+        color="never",
+        context_lines=0,
+    )
+
+    assert rendered == "[-1-][+2+]"
+
+
 def test_focused_renderer_emits_only_leaf_replacements_and_added_subtrees():
     rendered = render_focused(
         diff_node_for(
