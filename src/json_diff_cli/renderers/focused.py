@@ -1,8 +1,23 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ..types import DiffKind, DiffNode
-from .common import ordered_child_keys
-from .full import render_full
+from .common import ordered_child_keys, resolve_color_mode
+from .full import (
+    _append_suffix_to_blocks,
+    _attach_array_item,
+    _attach_object_field,
+    _materialize_block_breaks,
+    _render_node_lines,
+    render_full,
+)
+
+
+@dataclass(frozen=True)
+class _FocusedBlock:
+    node: DiffNode
+    context_node: DiffNode
 
 
 def render_focused(
@@ -12,7 +27,7 @@ def render_focused(
     context_lines: int,
     sort_keys: bool = False,
 ) -> str:
-    blocks = _collect_focused_blocks(node, sort_keys=sort_keys)
+    blocks = _collect_focused_blocks(node, parent=None, sort_keys=sort_keys)
     return "\n\n".join(
         _render_block(
             block,
@@ -27,42 +42,138 @@ def render_focused(
 def _collect_focused_blocks(
     node: DiffNode,
     *,
+    parent: DiffNode | None,
     sort_keys: bool,
-) -> list[DiffNode]:
+) -> list[_FocusedBlock]:
     if node.kind in (DiffKind.ADDED, DiffKind.REMOVED, DiffKind.REPLACED):
-        return [node]
+        return [_FocusedBlock(node=node, context_node=parent or node)]
 
     if node.kind is DiffKind.UNCHANGED:
         return []
 
-    blocks: list[DiffNode] = []
+    blocks: list[_FocusedBlock] = []
     if isinstance(node.children, dict):
         for key in ordered_child_keys(node.children, sort_keys=sort_keys):
-            blocks.extend(_collect_focused_blocks(node.children[key], sort_keys=sort_keys))
+            blocks.extend(
+                _collect_focused_blocks(
+                    node.children[key],
+                    parent=node,
+                    sort_keys=sort_keys,
+                )
+            )
         return blocks
 
     for child in node.children:
-        blocks.extend(_collect_focused_blocks(child, sort_keys=sort_keys))
+        blocks.extend(_collect_focused_blocks(child, parent=node, sort_keys=sort_keys))
     return blocks
 
 
 def _render_block(
-    node: DiffNode,
+    block: _FocusedBlock,
     *,
     color: str,
     context_lines: int,
     sort_keys: bool,
 ) -> str:
-    rendered_lines = render_full(node, color=color, sort_keys=sort_keys).splitlines()
+    rendered_lines, changed_indexes = _render_block_lines(
+        block,
+        color=color,
+        context_lines=context_lines,
+        sort_keys=sort_keys,
+    )
     rendered_lines = _select_context_lines(
         rendered_lines,
-        changed_indexes=_changed_line_indexes(node, rendered_lines),
+        changed_indexes=changed_indexes,
         context_lines=context_lines,
     )
 
     if not rendered_lines:
-        return node.path
-    return f"{node.path}\n" + "\n".join(rendered_lines)
+        return block.node.path
+    return f"{block.node.path}\n" + "\n".join(rendered_lines)
+
+
+def _render_block_lines(
+    block: _FocusedBlock,
+    *,
+    color: str,
+    context_lines: int,
+    sort_keys: bool,
+) -> tuple[list[str], list[int]]:
+    if context_lines <= 0 or block.context_node is block.node:
+        rendered_lines = render_full(
+            block.node,
+            color=color,
+            sort_keys=sort_keys,
+        ).splitlines()
+        return rendered_lines, _changed_line_indexes(rendered_lines)
+
+    return _render_context_lines(
+        block.context_node,
+        target_node=block.node,
+        color=color,
+        sort_keys=sort_keys,
+    )
+
+
+def _render_context_lines(
+    context_node: DiffNode,
+    *,
+    target_node: DiffNode,
+    color: str,
+    sort_keys: bool,
+) -> tuple[list[str], list[int]]:
+    color_mode = resolve_color_mode(color)
+
+    if context_node.kind is DiffKind.OBJECT and isinstance(context_node.children, dict):
+        keys = ordered_child_keys(context_node.children, sort_keys=sort_keys)
+        lines = ["{"]
+        changed_indexes: list[int] = []
+
+        for index, key in enumerate(keys):
+            child = context_node.children[key]
+            child_lines = _render_node_lines(
+                child,
+                indent=1,
+                color=color,
+                sort_keys=sort_keys,
+            )
+            child_lines = _attach_object_field(key, child_lines, indent=1)
+            if index < len(keys) - 1:
+                child_lines = _append_suffix_to_blocks(child_lines, ",")
+            materialized = _materialize_block_breaks(child_lines, color_mode=color_mode)
+            start = len(lines)
+            lines.extend(materialized)
+            if child is target_node:
+                changed_indexes.extend(range(start, len(lines)))
+
+        lines.append("}")
+        return lines, changed_indexes
+
+    if context_node.kind is DiffKind.ARRAY and isinstance(context_node.children, tuple):
+        lines = ["["]
+        changed_indexes: list[int] = []
+
+        for index, child in enumerate(context_node.children):
+            child_lines = _render_node_lines(
+                child,
+                indent=1,
+                color=color,
+                sort_keys=sort_keys,
+            )
+            child_lines = _attach_array_item(child_lines, indent=1)
+            if index < len(context_node.children) - 1:
+                child_lines = _append_suffix_to_blocks(child_lines, ",")
+            materialized = _materialize_block_breaks(child_lines, color_mode=color_mode)
+            start = len(lines)
+            lines.extend(materialized)
+            if child is target_node:
+                changed_indexes.extend(range(start, len(lines)))
+
+        lines.append("]")
+        return lines, changed_indexes
+
+    rendered_lines = render_full(context_node, color=color, sort_keys=sort_keys).splitlines()
+    return rendered_lines, _changed_line_indexes(rendered_lines)
 
 
 def _select_context_lines(
@@ -111,7 +222,7 @@ def _merge_windows(windows: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return merged
 
 
-def _changed_line_indexes(node: DiffNode, rendered_lines: list[str]) -> list[int]:
+def _changed_line_indexes(rendered_lines: list[str]) -> list[int]:
     if not rendered_lines:
         return []
     return list(range(len(rendered_lines)))

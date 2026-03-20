@@ -1,7 +1,7 @@
 import pytest
 
 from json_diff_cli.cli import build_parser
-from tests.conftest import run_cli
+from json_diff_cli.testing import run_cli
 
 
 def test_help_exits_zero():

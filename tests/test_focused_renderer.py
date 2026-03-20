@@ -43,6 +43,8 @@ def test_focused_renderer_keeps_leaf_scoped_blocks_with_context_lines():
     assert blocks[1].splitlines()[0] == "demographics.timezone"
     assert blocks[0].splitlines()[0] != "demographics"
     assert blocks[1].splitlines()[0] != "demographics"
+    assert '"timezone": [+[' in blocks[0]
+    assert '"population": [-1-][+2+]' in blocks[1]
 
 
 def test_focused_renderer_sort_keys_reorders_focused_block_fields():
@@ -56,7 +58,7 @@ def test_focused_renderer_sort_keys_reorders_focused_block_fields():
         sort_keys=True,
     )
 
-    assert rendered.index("a\n[-2-][+4+]") < rendered.index("b\n[-1-][+3+]")
+    assert rendered.index("a\n{") < rendered.index("b\n{")
 
 
 def test_focused_renderer_preserves_object_closing_delimiter_with_context_lines():
@@ -72,8 +74,8 @@ def test_focused_renderer_preserves_object_closing_delimiter_with_context_lines(
     lines = rendered.splitlines()
 
     assert lines[0] == "details"
-    assert lines[1] == "[+{"
-    assert lines[-1] == "}+]"
+    assert lines[1] == "{"
+    assert lines[-1] == "}"
 
 
 def test_focused_renderer_preserves_array_closing_delimiter_with_context_lines():
@@ -89,8 +91,43 @@ def test_focused_renderer_preserves_array_closing_delimiter_with_context_lines()
     lines = rendered.splitlines()
 
     assert lines[0] == "items"
-    assert lines[1] == "[+["
-    assert lines[-1] == "]+]"
+    assert lines[1] == "{"
+    assert lines[-1] == "}"
+
+
+def test_focused_renderer_context_lines_include_parent_neighbors_around_leaf():
+    rendered = render_focused(
+        diff_node_for(
+            {
+                "meta": {"id": 1},
+                "demographics": {
+                    "country": "AR",
+                    "population": 1,
+                    "timezone": "-3",
+                    "currency": "ARS",
+                },
+            },
+            {
+                "meta": {"id": 1},
+                "demographics": {
+                    "country": "AR",
+                    "population": 2,
+                    "timezone": "-3",
+                    "currency": "ARS",
+                },
+            },
+        ),
+        color="never",
+        context_lines=2,
+    )
+
+    block = rendered.split("\n\n")[0]
+
+    assert block.splitlines()[0] == "demographics.population"
+    assert '"country": "AR",' in block
+    assert '"timezone": "-3",' in block
+    assert '"currency": "ARS"' in block
+    assert '"meta"' not in block
 
 
 def test_select_context_lines_ignores_unchanged_literal_marker_strings():
