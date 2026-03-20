@@ -63,6 +63,54 @@ def test_duplicate_primitive_values_are_matched_by_occurrence_order():
     assert node.children[2].right == "inglés"
 
 
+def test_empty_smart_array_with_configured_rule_remains_unchanged():
+    node = diff_values(
+        "countries",
+        [],
+        [],
+        array_mode="smart",
+        match_rules=rules_for(path="countries", keys=[["id"]]),
+    )
+
+    assert node.kind is DiffKind.UNCHANGED
+    assert node.left == []
+    assert node.right == []
+    assert node.children == ()
+
+
+def test_numeric_primitive_arrays_match_by_json_number_equality():
+    node = diff_values(
+        "numbers",
+        [1, 2],
+        [2.0, 1.0],
+        array_mode="smart",
+    )
+
+    assert node.kind is DiffKind.ARRAY
+    assert [child.path for child in node.children] == [
+        "numbers[value=1#0]",
+        "numbers[value=2#0]",
+    ]
+    assert all(child.kind is DiffKind.UNCHANGED for child in node.children)
+
+
+def test_smart_primitive_matching_keeps_bool_distinct_from_numbers():
+    node = diff_values(
+        "values",
+        [True],
+        [1.0],
+        array_mode="smart",
+    )
+
+    assert node.kind is DiffKind.ARRAY
+    assert [child.path for child in node.children] == [
+        "values[value=true#0]",
+        "values[value=1.0#0]",
+    ]
+    assert node.children[0].kind is DiffKind.REMOVED
+    assert node.children[1].kind is DiffKind.ADDED
+
+
 def test_missing_declared_key_raises_error():
     left = [{"id": 1, "source": "seed"}]
     right = [{"id": 1}]

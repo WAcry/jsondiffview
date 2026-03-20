@@ -189,6 +189,14 @@ def _diff_array_smart(
 ) -> DiffNode:
     candidates = object_key_candidates(path, match_rules)
     merged_items: list[object] = [*left, *right]
+    if not merged_items:
+        return DiffNode(
+            path=path,
+            kind=DiffKind.UNCHANGED,
+            left=list(left),
+            right=list(right),
+            children=(),
+        )
 
     if _is_primitive_array(merged_items):
         if candidates:
@@ -478,6 +486,8 @@ def _is_json_scalar(value: JsonValue) -> bool:
 
 
 def _scalar_identity(value: JsonValue) -> object:
+    if _is_number(value):
+        return ("number", value)
     return (type(value), value)
 
 
