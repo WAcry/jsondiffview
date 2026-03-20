@@ -54,3 +54,13 @@ def test_build_match_rule_set_rejects_numeric_path_segments():
 
     with pytest.raises(UserInputError, match="countries.0.cities"):
         build_match_rule_set([], config)
+
+
+def test_build_match_rule_set_rejects_indexed_path_syntax():
+    config = MatchConfig(
+        global_matches=[],
+        path_matches={"countries[0].cities": [["id"]]},
+    )
+
+    with pytest.raises(UserInputError, match="countries\\[0\\]\\.cities"):
+        build_match_rule_set([], config)
