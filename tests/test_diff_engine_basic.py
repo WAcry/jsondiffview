@@ -10,6 +10,8 @@ def test_scalar_replacement_creates_replaced_node():
     assert node.left == "Buenos Aires"
     assert node.right == "Rawson"
     assert node.children == {}
+    assert node.text_diff is not None
+    assert len(node.text_diff.fragments) > 0
 
 
 def test_equal_object_returns_unchanged_node():
@@ -116,3 +118,10 @@ def test_positional_array_replacement_uses_numeric_index_path():
     assert node.children[1].kind is DiffKind.REPLACED
     assert node.children[1].left == "en"
     assert node.children[1].right == "fr"
+
+
+def test_non_string_scalar_replacement_does_not_create_text_diff_payload():
+    node = diff_values("population", 1, 2)
+
+    assert node.kind is DiffKind.REPLACED
+    assert node.text_diff is None

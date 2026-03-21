@@ -11,6 +11,7 @@ from .matcher import (
     resolve_object_key_rule,
 )
 from .path_syntax import append_object_path
+from .text_diff import TextDiff, diff_strings
 from .types import DiffKind, DiffNode, JsonValue, MatchRuleSet
 
 
@@ -62,6 +63,7 @@ def diff_values(
         left=left,
         right=right,
         children={},
+        text_diff=_build_text_diff(left, right),
     )
 
 
@@ -491,6 +493,12 @@ def _scalar_identity(value: JsonValue) -> object:
 
 def _empty_match_rules() -> MatchRuleSet:
     return MatchRuleSet(cli_global_keys=[], yaml_global_keys=[], yaml_path_keys={})
+
+
+def _build_text_diff(left: JsonValue, right: JsonValue) -> TextDiff | None:
+    if not isinstance(left, str) or not isinstance(right, str):
+        return None
+    return TextDiff(diff_strings(left, right))
 
 
 def _empty_children_for(value: JsonValue) -> dict[str, DiffNode] | tuple[DiffNode, ...]:

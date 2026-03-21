@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TypeAlias
 
+from .text_diff import TextDiff
+
 
 JsonScalar: TypeAlias = None | bool | int | float | str
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
@@ -36,6 +38,7 @@ class DiffNode:
     left: JsonValue | _MissingValue = MISSING
     right: JsonValue | _MissingValue = MISSING
     children: DiffChildren = ()
+    text_diff: TextDiff | None = None
 
     @property
     def has_changes(self) -> bool:
