@@ -213,8 +213,6 @@ def _diff_array_smart(
 
     keys = resolve_object_key_rule(path, merged_items, match_rules)
     if keys is None:
-        if candidates:
-            _validate_object_match_items(path, merged_items, candidates[0])
         if _json_values_equal(left, right):
             return DiffNode(
                 path=path,
