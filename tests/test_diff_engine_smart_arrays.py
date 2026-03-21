@@ -111,6 +111,28 @@ def test_smart_primitive_matching_keeps_bool_distinct_from_numbers():
     assert node.children[1].kind is DiffKind.ADDED
 
 
+def test_smart_primitive_arrays_ignore_global_object_match_candidates():
+    node = diff_values(
+        "languages",
+        ["english"],
+        ["inglés"],
+        array_mode="smart",
+        match_rules=MatchRuleSet(
+            cli_global_keys=["name"],
+            yaml_global_keys=[],
+            yaml_path_keys={},
+        ),
+    )
+
+    assert node.kind is DiffKind.ARRAY
+    assert [child.path for child in node.children] == [
+        'languages[value="english"#0]',
+        'languages[value="inglés"#0]',
+    ]
+    assert node.children[0].kind is DiffKind.REMOVED
+    assert node.children[1].kind is DiffKind.ADDED
+
+
 def test_missing_declared_key_raises_error():
     left = [{"id": 1, "source": "seed"}]
     right = [{"id": 1}]
@@ -125,18 +147,21 @@ def test_missing_declared_key_raises_error():
         )
 
 
-def test_keyed_rule_on_non_object_items_raises_error():
+def test_keyed_rule_on_non_object_items_is_ignored_for_primitive_matching():
     left = ["ar"]
     right = ["ar"]
 
-    with pytest.raises(UserInputError, match="requires object items"):
-        diff_values(
-            "countries",
-            left,
-            right,
-            array_mode="smart",
-            match_rules=rules_for(path="countries", keys=[["id"]]),
-        )
+    node = diff_values(
+        "countries",
+        left,
+        right,
+        array_mode="smart",
+        match_rules=rules_for(path="countries", keys=[["id"]]),
+    )
+
+    assert node.kind is DiffKind.UNCHANGED
+    assert node.left == ["ar"]
+    assert node.right == ["ar"]
 
 
 def test_smart_mode_falls_back_to_positional_when_no_rule_applies():

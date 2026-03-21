@@ -199,8 +199,6 @@ def _diff_array_smart(
         )
 
     if _is_primitive_array(merged_items):
-        if candidates:
-            raise UserInputError(f"Match rule for '{path}' requires object items")
         if _json_values_equal(left, right):
             return DiffNode(
                 path=path,
