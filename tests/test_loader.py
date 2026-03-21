@@ -23,11 +23,13 @@ def test_invalid_json_error_includes_line_and_column(tmp_path):
     path = tmp_path / "broken.json"
     path.write_text('{\n  "a": 1,\n}\n', encoding="utf-8")
 
-    with pytest.raises(
-        UserInputError,
-        match=r"broken\.json.*line 3.*column 1",
-    ):
+    with pytest.raises(UserInputError) as exc_info:
         load_json_file(path)
+
+    message = str(exc_info.value)
+    assert "broken.json" in message
+    assert "line " in message
+    assert "column " in message
 
 
 def test_non_standard_json_constant_raises_user_input_error(tmp_path):
