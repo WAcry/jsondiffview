@@ -19,6 +19,17 @@ def test_invalid_json_raises_user_input_error(tmp_path):
         load_json_file(path)
 
 
+def test_invalid_json_error_includes_line_and_column(tmp_path):
+    path = tmp_path / "broken.json"
+    path.write_text('{\n  "a": 1,\n}\n', encoding="utf-8")
+
+    with pytest.raises(
+        UserInputError,
+        match=r"broken\.json.*line 3.*column 1",
+    ):
+        load_json_file(path)
+
+
 def test_non_standard_json_constant_raises_user_input_error(tmp_path):
     path = tmp_path / "broken.json"
     path.write_text('{"value": NaN}', encoding="utf-8")
@@ -59,6 +70,17 @@ def test_invalid_yaml_raises_user_input_error(tmp_path):
     path.write_text("global_matches: [", encoding="utf-8")
 
     with pytest.raises(UserInputError, match="Invalid YAML"):
+        load_match_config(path)
+
+
+def test_invalid_yaml_error_includes_line_and_column(tmp_path):
+    path = tmp_path / "match.yaml"
+    path.write_text("global_matches:\n  - [id,\n", encoding="utf-8")
+
+    with pytest.raises(
+        UserInputError,
+        match=r"match\.yaml.*line 3.*column 1",
+    ):
         load_match_config(path)
 
 

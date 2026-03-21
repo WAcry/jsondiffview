@@ -22,8 +22,10 @@ def load_json_file(path: Path) -> object:
             parse_constant=_reject_non_standard_constant,
             object_pairs_hook=_build_unique_json_object,
         )
-    except (json.JSONDecodeError, ValueError) as exc:
-        raise UserInputError(f"Invalid JSON: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise UserInputError(_format_json_decode_error(path, exc)) from exc
+    except ValueError as exc:
+        raise UserInputError(_format_json_value_error(path, exc)) from exc
 
 
 def load_match_config(path: Path) -> MatchConfig:
@@ -35,7 +37,7 @@ def load_match_config(path: Path) -> MatchConfig:
     try:
         data = yaml.load(raw_text, Loader=_UniqueKeySafeLoader)
     except yaml.YAMLError as exc:
-        raise UserInputError(f"Invalid YAML: {path}") from exc
+        raise UserInputError(_format_yaml_error(path, exc)) from exc
 
     if data is None:
         data = {}
@@ -45,6 +47,27 @@ def load_match_config(path: Path) -> MatchConfig:
 
 def _reject_non_standard_constant(token: str) -> None:
     raise ValueError(f"Invalid JSON constant: {token}")
+
+
+def _format_json_decode_error(path: Path, exc: json.JSONDecodeError) -> str:
+    return (
+        f"Invalid JSON: {path} "
+        f"(line {exc.lineno}, column {exc.colno}): {exc.msg}"
+    )
+
+
+def _format_json_value_error(path: Path, exc: ValueError) -> str:
+    return f"Invalid JSON: {path}: {exc}"
+
+
+def _format_yaml_error(path: Path, exc: yaml.YAMLError) -> str:
+    mark = getattr(exc, "problem_mark", None)
+    if mark is None:
+        return f"Invalid YAML: {path}"
+    return (
+        f"Invalid YAML: {path} "
+        f"(line {mark.line + 1}, column {mark.column + 1})"
+    )
 
 
 def _build_unique_json_object(
