@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 
-from .errors import UserInputError
-from .path_syntax import (
+from jsondiffview_errors import UserInputError
+from jsondiffview_path_syntax import (
     append_object_path,
     match_rule_path,
     parse_object_key_path,
     parse_rule_path,
     rule_path_specificity,
 )
-from .types import MatchRuleSet
+from jsondiffview_types import MatchRuleSet
 
 
 def resolve_object_key_rule(
@@ -131,8 +131,6 @@ def _resolve_dotted_key(value: Mapping[str, object], dotted_key: str) -> object:
             raise UserInputError(f"Missing match key '{dotted_key}'")
         current = current[segment]
     return current
-
-
 
 def _format_identity_value(key: str, value: object) -> str:
     if not _is_json_scalar(value):

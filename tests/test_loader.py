@@ -1,7 +1,7 @@
 import pytest
 
-from json_diff_cli.errors import UserInputError
-from json_diff_cli.loader import load_json_file, load_match_config
+from jsondiffview_errors import UserInputError
+from jsondiffview_loader import load_json_file, load_match_config
 
 
 def test_load_json_file_reads_strict_json(tmp_path):

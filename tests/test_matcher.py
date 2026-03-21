@@ -1,12 +1,12 @@
 import pytest
 
-from json_diff_cli.errors import UserInputError
-from json_diff_cli.matcher import (
+from jsondiffview_errors import UserInputError
+from jsondiffview_matcher import (
     canonical_object_path,
     canonical_primitive_path,
     resolve_object_key_rule,
 )
-from json_diff_cli.types import MatchRuleSet
+from jsondiffview_types import MatchRuleSet
 
 
 def test_yaml_path_rule_beats_global_and_cli():

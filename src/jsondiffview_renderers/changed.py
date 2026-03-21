@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..types import DiffKind, DiffNode, MISSING
-from .common import (
+from jsondiffview_renderers.common import (
     format_changed_string_preview,
     format_changed_value,
     ordered_child_keys,
 )
+from jsondiffview_types import DiffKind, DiffNode, MISSING
 
 
 @dataclass(frozen=True)

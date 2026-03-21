@@ -4,8 +4,8 @@ import json
 import sys
 from collections.abc import Mapping
 
-from ..text_diff import StringFragment
-from ..types import JsonValue
+from jsondiffview_text_diff import StringFragment
+from jsondiffview_types import JsonValue
 
 
 INDENT = "  "

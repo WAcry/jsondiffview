@@ -1,13 +1,13 @@
 import pytest
 
-from json_diff_cli.cli import build_parser, main
-from json_diff_cli.testing import run_cli
-
+from jsondiffview import __version__
+from jsondiffview_cli import build_parser, main
+from jsondiffview_testing import run_cli
 
 def test_help_exits_zero():
     result = run_cli("--help")
     assert result.returncode == 0
-    assert "json-diff FILE_A FILE_B" in result.stdout
+    assert "jsondiffview FILE_A FILE_B" in result.stdout
     assert "--view {full,changed}" in result.stdout
     assert "focused" not in result.stdout
     assert "--context-lines" not in result.stdout
@@ -17,13 +17,13 @@ def test_missing_args_exits_two():
     result = run_cli()
     assert result.returncode == 2
     assert result.stdout == ""
-    assert "json-diff FILE_A FILE_B" in result.stderr
-
+    assert "jsondiffview FILE_A FILE_B" in result.stderr
 
 def test_version_exits_zero():
     result = run_cli("--version")
     assert result.returncode == 0
-
+    assert result.stdout.strip() == f"jsondiffview {__version__}"
+    assert result.stderr == ""
 
 def test_parser_default_view_and_array_mode():
     parser = build_parser()
@@ -87,7 +87,7 @@ def test_renderer_failure_returns_three_with_stderr_diagnostic(
     def raise_render_failure(*args, **kwargs):
         raise RuntimeError("renderer exploded")
 
-    monkeypatch.setattr("json_diff_cli.cli.render_full", raise_render_failure)
+    monkeypatch.setattr("jsondiffview_cli.render_full", raise_render_failure)
 
     result = main([str(left), str(right), "--color", "never"])
     captured = capsys.readouterr()
@@ -95,6 +95,7 @@ def test_renderer_failure_returns_three_with_stderr_diagnostic(
     assert result == 3
     assert captured.out == ""
     assert "internal error" in captured.err.lower()
+
 
 def test_print_failure_returns_three_with_stderr_diagnostic(
     tmp_path, monkeypatch, capsys

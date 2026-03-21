@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from .errors import UserInputError
-from .matcher import (
+from jsondiffview_errors import UserInputError
+from jsondiffview_matcher import (
     build_object_identity,
     canonical_object_path,
     canonical_primitive_path,
     object_key_candidates,
     resolve_object_key_rule,
 )
-from .path_syntax import append_object_path
-from .text_diff import TextDiff, diff_strings
-from .types import DiffKind, DiffNode, JsonValue, MatchInfo, MatchRuleSet
+from jsondiffview_path_syntax import append_object_path
+from jsondiffview_text_diff import TextDiff, diff_strings
+from jsondiffview_types import DiffKind, DiffNode, JsonValue, MatchInfo, MatchRuleSet
 
 
 def diff_values(

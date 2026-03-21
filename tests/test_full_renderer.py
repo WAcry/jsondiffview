@@ -2,8 +2,8 @@ import sys
 
 import pytest
 
-from json_diff_cli.diff_engine import diff_values
-from json_diff_cli.renderers.full import render_full
+from jsondiffview_diff_engine import diff_values
+from jsondiffview_renderers.full import render_full
 
 
 def diff_node_for(left, right):

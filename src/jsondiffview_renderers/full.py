@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..types import DiffKind, DiffNode, JsonValue, MISSING
-from .common import (
+from jsondiffview_renderers.common import (
     append_suffix,
     format_replaced_scalar,
     format_replaced_string,
@@ -16,6 +15,7 @@ from .common import (
     wrap_added_lines,
     wrap_removed_lines,
 )
+from jsondiffview_types import DiffKind, DiffNode, JsonValue, MISSING
 
 _BLOCK_BREAK = "\0BLOCK_BREAK\0"
 

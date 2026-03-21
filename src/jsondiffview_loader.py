@@ -6,8 +6,8 @@ from pathlib import Path
 import yaml
 from yaml.nodes import MappingNode
 
-from .errors import UserInputError
-from .match_rules import MatchConfig
+from jsondiffview_errors import UserInputError
+from jsondiffview_match_rules import MatchConfig
 
 
 def load_json_file(path: Path) -> object:

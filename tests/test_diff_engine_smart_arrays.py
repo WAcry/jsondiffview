@@ -1,8 +1,8 @@
 import pytest
 
-from json_diff_cli.diff_engine import diff_values
-from json_diff_cli.errors import UserInputError
-from json_diff_cli.types import DiffKind, MatchRuleSet
+from jsondiffview_diff_engine import diff_values
+from jsondiffview_errors import UserInputError
+from jsondiffview_types import DiffKind, MatchRuleSet
 
 
 def rules_for(*, path: str | None = None, keys: list[list[str]] | None = None) -> MatchRuleSet:

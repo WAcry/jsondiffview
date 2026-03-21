@@ -1,4 +1,4 @@
-from json_diff_cli.text_diff import diff_strings
+from jsondiffview_text_diff import diff_strings
 
 
 def test_diff_strings_returns_equal_remove_add_fragments():

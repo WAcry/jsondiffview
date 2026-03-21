@@ -3,16 +3,20 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from . import __version__
-from .diff_engine import diff_values
-from .errors import UserInputError
-from .loader import load_json_file, load_match_config
-from .match_rules import build_match_rule_set
-from .renderers import render_changed, render_full
+from jsondiffview import __version__
+from jsondiffview_diff_engine import diff_values
+from jsondiffview_errors import UserInputError
+from jsondiffview_loader import load_json_file, load_match_config
+from jsondiffview_match_rules import build_match_rule_set
+from jsondiffview_renderers import render_changed, render_full
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="json-diff", usage="json-diff FILE_A FILE_B")
+    parser = argparse.ArgumentParser(
+        prog="jsondiffview",
+        usage="jsondiffview FILE_A FILE_B",
+        description="Render deterministic diffs between two JSON files.",
+    )
     parser.add_argument("file_a", nargs="?", metavar="FILE_A")
     parser.add_argument("file_b", nargs="?", metavar="FILE_B")
     parser.add_argument("--view", choices=("full", "changed"), default="full")
@@ -30,7 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.version:
-        print(f"json-diff-cli {__version__}")
+        print(f"jsondiffview {__version__}")
         return 0
     if args.file_a is None or args.file_b is None:
         parser.print_usage(sys.stderr)

@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from .errors import UserInputError
-from .path_syntax import parse_object_key_path, parse_rule_path
-from .types import MatchRuleSet
+from jsondiffview_errors import UserInputError
+from jsondiffview_path_syntax import parse_object_key_path, parse_rule_path
+from jsondiffview_types import MatchRuleSet
 
 
 @dataclass(frozen=True)

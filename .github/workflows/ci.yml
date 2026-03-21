@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run test suite
+        run: uv run --with pytest pytest
+
+      - name: Smoke test module entrypoint and changed view
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          Path("left.json").write_text('{"word":"english"}', encoding="utf-8")
+          Path("right.json").write_text('{"word":"inglés"}', encoding="utf-8")
+
+          help_result = subprocess.run(
+              [sys.executable, "-m", "jsondiffview", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+          )
+          assert help_result.returncode == 0, help_result
+          assert "usage: jsondiffview" in help_result.stdout, help_result.stdout
+
+          diff_result = subprocess.run(
+              [
+                  sys.executable,
+                  "-m",
+                  "jsondiffview",
+                  "left.json",
+                  "right.json",
+                  "--view",
+                  "changed",
+                  "--color",
+                  "auto",
+              ],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+          )
+          assert diff_result.returncode == 1, diff_result.returncode
+          assert "word (replace)" in diff_result.stdout, diff_result.stdout
+          '@ | uv run python -

@@ -1,4 +1,4 @@
-from json_diff_cli.testing import run_cli
+from jsondiffview_testing import run_cli
 
 
 def test_cli_returns_one_when_diff_exists(tmp_path):

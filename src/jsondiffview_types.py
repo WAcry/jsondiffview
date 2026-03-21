@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, TypeAlias
 
-from .text_diff import TextDiff
+from jsondiffview_text_diff import TextDiff
 
 
 JsonScalar: TypeAlias = None | bool | int | float | str

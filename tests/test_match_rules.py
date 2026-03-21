@@ -1,8 +1,8 @@
 import pytest
 
-from json_diff_cli.errors import UserInputError
-from json_diff_cli.match_rules import MatchConfig, build_match_rule_set
-from json_diff_cli.path_syntax import match_rule_path, parse_rule_path
+from jsondiffview_errors import UserInputError
+from jsondiffview_match_rules import MatchConfig, build_match_rule_set
+from jsondiffview_path_syntax import match_rule_path, parse_rule_path
 
 
 def test_match_config_from_mapping_normalizes_scalar_and_composite_candidates():

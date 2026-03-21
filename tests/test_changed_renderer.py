@@ -1,7 +1,7 @@
 import sys
 
-from json_diff_cli.diff_engine import diff_values
-from json_diff_cli.renderers.changed import render_changed
+from jsondiffview_diff_engine import diff_values
+from jsondiffview_renderers.changed import render_changed
 
 
 def diff_node_for(left, right):

@@ -14,7 +14,7 @@ if str(SRC_ROOT) not in sys.path:
 def run_cli(*args: str):
     env = {**os.environ, "PYTHONPATH": str(SRC_ROOT)}
     return run(
-        [sys.executable, "-m", "json_diff_cli", *args],
+        [sys.executable, "-m", "jsondiffview", *args],
         capture_output=True,
         text=True,
         env=env,

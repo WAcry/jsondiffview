@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 import json
 
-from .errors import UserInputError
+from jsondiffview_errors import UserInputError
 
 
 @dataclass(frozen=True)
