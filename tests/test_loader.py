@@ -103,7 +103,7 @@ def test_unhashable_yaml_key_raises_user_input_error(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(UserInputError, match="YAML key"):
+    with pytest.raises(UserInputError, match=r"match\.yaml.*YAML key"):
         load_match_config(path)
 
 

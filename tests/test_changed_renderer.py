@@ -67,6 +67,25 @@ def test_changed_renderer_sorts_added_object_preview_when_requested():
     assert 'new: {"a": 2, "b": 1}' in rendered
 
 
+def test_changed_renderer_sorts_removed_object_preview_when_requested():
+    rendered = render_changed(
+        diff_node_for({"obj": {"b": 1, "a": 2}}, {}),
+        color="never",
+        sort_keys=True,
+    )
+
+    assert 'old: {"a": 2, "b": 1}' in rendered
+
+
+def test_changed_renderer_colors_added_object_preview_when_requested():
+    rendered = render_changed(
+        diff_node_for({}, {"obj": {"a": 1}}),
+        color="always",
+    )
+
+    assert "\x1b[" in rendered
+
+
 def test_changed_renderer_removed_block_emits_only_old_preview():
     rendered = render_changed(
         diff_node_for({"obj": {"a": 1}}, {}),

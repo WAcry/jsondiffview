@@ -146,3 +146,31 @@ def test_invalid_match_config_shape_returns_two_with_file_path(tmp_path):
     assert "rules.yaml" in result.stderr
     assert "global_matches" in result.stderr
     assert result.stdout == ""
+
+
+def test_position_mode_accepts_match_rules_but_keeps_positional_semantics(tmp_path):
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    left.write_text(
+        '{"countries":[{"id":1,"capital":"A"},{"id":2,"capital":"B"}]}',
+        encoding="utf-8",
+    )
+    right.write_text(
+        '{"countries":[{"id":2,"capital":"B"},{"id":1,"capital":"A"}]}',
+        encoding="utf-8",
+    )
+
+    result = run_cli(
+        str(left),
+        str(right),
+        "--view",
+        "changed",
+        "--match",
+        "id",
+        "--color",
+        "never",
+    )
+
+    assert result.returncode == 1
+    assert "countries[0].id (replace)" in result.stdout
+    assert "countries[id=1]" not in result.stdout
