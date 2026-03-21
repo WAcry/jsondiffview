@@ -30,3 +30,36 @@ def test_changed_renderer_does_not_emit_parent_container_snippets():
 
     assert rendered.splitlines()[0] == "a.b (replace)"
     assert "{\n" not in rendered
+
+
+def test_changed_renderer_uses_fragment_aware_old_and_new_string_previews():
+    rendered = render_changed(
+        diff_node_for({"word": "english"}, {"word": "inglés"}),
+        color="never",
+    )
+
+    assert 'old: "english"' not in rendered
+    assert 'new: "inglés"' not in rendered
+    assert 'old: "' in rendered
+    assert 'new: "' in rendered
+    assert "[-" in rendered
+    assert "[+" in rendered
+
+
+def test_changed_renderer_honors_color_for_string_previews():
+    rendered = render_changed(
+        diff_node_for({"word": "old"}, {"word": "new"}),
+        color="always",
+    )
+
+    assert "\x1b[" in rendered
+
+
+def test_changed_renderer_sorts_added_object_preview_when_requested():
+    rendered = render_changed(
+        diff_node_for({}, {"obj": {"b": 1, "a": 2}}),
+        color="never",
+        sort_keys=True,
+    )
+
+    assert 'new: {"a": 2, "b": 1}' in rendered

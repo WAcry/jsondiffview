@@ -22,6 +22,10 @@ def json_text(value: JsonValue) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def json_preview(value: JsonValue, *, sort_keys: bool = False) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=sort_keys)
+
+
 def ordered_object_keys(mapping: Mapping[str, JsonValue], *, sort_keys: bool) -> list[str]:
     keys = list(mapping)
     if sort_keys:
@@ -93,6 +97,53 @@ def format_replaced_string(
     return f"\"{''.join(rendered_parts)}\""
 
 
+def format_changed_value(
+    value: JsonValue,
+    *,
+    role: str,
+    color: str,
+    sort_keys: bool = False,
+) -> str:
+    text = json_preview(value, sort_keys=sort_keys)
+    color_mode = resolve_color_mode(color)
+    if color_mode != "ansi":
+        return text
+    if role == "add":
+        return f"{ANSI_GREEN}{text}{ANSI_RESET}"
+    if role == "remove":
+        return f"{ANSI_RED}{text}{ANSI_RESET}"
+    return text
+
+
+def format_changed_string_preview(
+    fragments: tuple[StringFragment, ...],
+    *,
+    mode: str,
+    color: str,
+) -> str:
+    color_mode = resolve_color_mode(color)
+    rendered_parts: list[str] = []
+
+    for fragment in fragments:
+        if fragment.role == "equal":
+            rendered_parts.append(_json_string_inner(fragment.text))
+            continue
+        if fragment.role == "remove":
+            if mode == "new":
+                continue
+            rendered_parts.append(
+                _format_changed_fragment(_json_string_inner(fragment.text), "remove", color_mode)
+            )
+            continue
+        if mode == "old":
+            continue
+        rendered_parts.append(
+            _format_changed_fragment(_json_string_inner(fragment.text), "add", color_mode)
+        )
+
+    return f"\"{''.join(rendered_parts)}\""
+
+
 def wrap_added_lines(lines: list[str], *, color: str) -> list[str]:
     return _wrap_lines(lines, marker="added", color=color)
 
@@ -149,3 +200,10 @@ def _insert_prefix_after_indent(line: str, prefix: str) -> str:
 
 def _json_string_inner(text: str) -> str:
     return json.dumps(text, ensure_ascii=False)[1:-1]
+
+
+def _format_changed_fragment(text: str, role: str, color_mode: str) -> str:
+    if color_mode == "ansi":
+        color = ANSI_GREEN if role == "add" else ANSI_RED
+        return f"{color}{text}{ANSI_RESET}"
+    return f"[{'+' if role == 'add' else '-'}{text}{'+' if role == 'add' else '-'}]"

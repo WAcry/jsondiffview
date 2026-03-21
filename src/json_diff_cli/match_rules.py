@@ -35,6 +35,7 @@ class MatchConfig:
         path_matches: dict[str, list[list[str]]] = {}
         for path, candidates in path_matches_raw.items():
             path_key = _require_string(path, context="path_matches key")
+            parse_rule_path(path_key)
             path_matches[path_key] = _parse_candidate_groups(
                 candidates,
                 context=f"path_matches.{path_key}",

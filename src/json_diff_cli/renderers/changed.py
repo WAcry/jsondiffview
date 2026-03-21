@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..types import DiffKind, DiffNode, MISSING
-from .common import json_text, ordered_child_keys
+from .common import (
+    format_changed_string_preview,
+    format_changed_value,
+    ordered_child_keys,
+)
 
 
 @dataclass(frozen=True)
@@ -18,10 +22,11 @@ def render_changed(
     color: str,
     sort_keys: bool = False,
 ) -> str:
-    del color
-
     blocks = _collect_changed_blocks(node, sort_keys=sort_keys)
-    return "\n\n".join(_render_changed_block(block) for block in blocks)
+    return "\n\n".join(
+        _render_changed_block(block, color=color, sort_keys=sort_keys)
+        for block in blocks
+    )
 
 
 def _collect_changed_blocks(
@@ -51,11 +56,59 @@ def _collect_changed_blocks(
     return blocks
 
 
-def _render_changed_block(block: _ChangedBlock) -> str:
+def _render_changed_block(
+    block: _ChangedBlock,
+    *,
+    color: str,
+    sort_keys: bool,
+) -> str:
     node = block.node
     lines = [f"{node.display_path} ({block.action})"]
     if block.action != "add" and node.left is not MISSING:
-        lines.append(f"  old: {json_text(node.left)}")
+        lines.append(
+            f"  old: {_render_changed_preview(node, side='old', color=color, sort_keys=sort_keys)}"
+        )
     if block.action != "remove" and node.right is not MISSING:
-        lines.append(f"  new: {json_text(node.right)}")
+        lines.append(
+            f"  new: {_render_changed_preview(node, side='new', color=color, sort_keys=sort_keys)}"
+        )
     return "\n".join(lines)
+
+
+def _render_changed_preview(
+    node: DiffNode,
+    *,
+    side: str,
+    color: str,
+    sort_keys: bool,
+) -> str:
+    if (
+        node.kind is DiffKind.REPLACED
+        and node.text_diff is not None
+        and isinstance(node.left, str)
+        and isinstance(node.right, str)
+    ):
+        return format_changed_string_preview(
+            node.text_diff.fragments,
+            mode=side,
+            color=color,
+        )
+
+    if side == "old":
+        if node.left is MISSING:
+            raise ValueError("Old preview requested for node without left value")
+        return format_changed_value(
+            node.left,
+            role="remove",
+            color=color,
+            sort_keys=sort_keys,
+        )
+
+    if node.right is MISSING:
+        raise ValueError("New preview requested for node without right value")
+    return format_changed_value(
+        node.right,
+        role="add",
+        color=color,
+        sort_keys=sort_keys,
+    )

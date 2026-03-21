@@ -36,13 +36,18 @@ def load_match_config(path: Path) -> MatchConfig:
 
     try:
         data = yaml.load(raw_text, Loader=_UniqueKeySafeLoader)
+    except UserInputError as exc:
+        raise UserInputError(f"Invalid match config: {path}: {exc}") from exc
     except yaml.YAMLError as exc:
         raise UserInputError(_format_yaml_error(path, exc)) from exc
 
     if data is None:
         data = {}
 
-    return MatchConfig.from_mapping(data)
+    try:
+        return MatchConfig.from_mapping(data)
+    except UserInputError as exc:
+        raise UserInputError(f"Invalid match config: {path}: {exc}") from exc
 
 
 def _reject_non_standard_constant(token: str) -> None:
