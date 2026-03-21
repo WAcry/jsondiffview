@@ -16,7 +16,21 @@ def test_full_renderer_shows_inline_scalar_replacement():
         color="never",
     )
 
-    assert '[-"Buenos Aires"-][+"Rawson"+]' in rendered
+    assert '"capital": "' in rendered
+    assert '[-"Buenos Aires"-][+"Rawson"+]' not in rendered
+    assert '[-Buenos Aires-][+Rawson+]' in rendered
+
+
+def test_full_renderer_uses_fragment_markers_for_string_replacements():
+    rendered = render_full(
+        diff_node_for({"word": "english"}, {"word": "inglés"}),
+        color="never",
+    )
+
+    assert '"word": "' in rendered
+    assert '[-"english"-][+"inglés"+]' not in rendered
+    assert "[-" in rendered
+    assert "[+" in rendered
 
 
 def test_full_renderer_uses_normalized_pretty_print_with_render_time_sorting():

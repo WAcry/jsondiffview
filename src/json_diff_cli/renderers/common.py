@@ -4,6 +4,7 @@ import json
 import sys
 from collections.abc import Mapping
 
+from ..text_diff import StringFragment
 from ..types import JsonValue
 
 
@@ -67,6 +68,31 @@ def format_replaced_scalar(left: JsonValue, right: JsonValue, *, color: str) -> 
     return f"[-{left_text}-][+{right_text}+]"
 
 
+def format_replaced_string(
+    fragments: tuple[StringFragment, ...],
+    *,
+    left: str,
+    right: str,
+    color: str,
+) -> str:
+    color_mode = resolve_color_mode(color)
+    if color_mode != "markers":
+        return format_replaced_scalar(left, right, color=color)
+
+    rendered_parts: list[str] = []
+    for fragment in fragments:
+        text = _json_string_inner(fragment.text)
+        if fragment.role == "equal":
+            rendered_parts.append(text)
+            continue
+        if fragment.role == "remove":
+            rendered_parts.append(f"[-{text}-]")
+            continue
+        rendered_parts.append(f"[+{text}+]")
+
+    return f"\"{''.join(rendered_parts)}\""
+
+
 def wrap_added_lines(lines: list[str], *, color: str) -> list[str]:
     return _wrap_lines(lines, marker="added", color=color)
 
@@ -119,3 +145,7 @@ def _insert_prefix_after_indent(line: str, prefix: str) -> str:
     while index < len(line) and line[index] == " ":
         index += 1
     return f"{line[:index]}{prefix}{line[index:]}"
+
+
+def _json_string_inner(text: str) -> str:
+    return json.dumps(text, ensure_ascii=False)[1:-1]

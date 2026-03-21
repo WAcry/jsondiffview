@@ -6,6 +6,7 @@ from ..types import DiffKind, DiffNode, JsonValue, MISSING
 from .common import (
     append_suffix,
     format_replaced_scalar,
+    format_replaced_string,
     indent_text,
     json_text,
     ordered_child_keys,
@@ -50,6 +51,14 @@ def _render_node_lines(
     if node.kind is DiffKind.REPLACED:
         if node.left is MISSING or node.right is MISSING:
             raise ValueError("Replaced diff node is missing values")
+        if (
+            isinstance(node.left, str)
+            and isinstance(node.right, str)
+            and node.text_diff is not None
+        ):
+            return [
+                f"{indent_text(indent)}{format_replaced_string(node.text_diff.fragments, left=node.left, right=node.right, color=color)}"
+            ]
         if _is_scalar(node.left) and _is_scalar(node.right):
             return [f"{indent_text(indent)}{format_replaced_scalar(node.left, node.right, color=color)}"]
         removed_lines = wrap_removed_lines(
