@@ -53,7 +53,7 @@ def _collect_changed_blocks(
 
 def _render_changed_block(block: _ChangedBlock) -> str:
     node = block.node
-    lines = [f"{node.path} ({block.action})"]
+    lines = [f"{node.display_path} ({block.action})"]
     if block.action != "add" and node.left is not MISSING:
         lines.append(f"  old: {json_text(node.left)}")
     if block.action != "remove" and node.right is not MISSING:

@@ -12,7 +12,7 @@ from .matcher import (
 )
 from .path_syntax import append_object_path
 from .text_diff import TextDiff, diff_strings
-from .types import DiffKind, DiffNode, JsonValue, MatchRuleSet
+from .types import DiffKind, DiffNode, JsonValue, MatchInfo, MatchRuleSet
 
 
 def diff_values(
@@ -264,6 +264,11 @@ def _diff_primitive_array_by_value(
                     kind=DiffKind.ADDED,
                     right=right_index[identity],
                     children={},
+                    match_info=MatchInfo(
+                        mode="primitive-smart",
+                        identity_values=(value,),
+                        occurrence=occurrence,
+                    ),
                 )
             )
             continue
@@ -274,16 +279,29 @@ def _diff_primitive_array_by_value(
                     kind=DiffKind.REMOVED,
                     left=left_index[identity],
                     children={},
+                    match_info=MatchInfo(
+                        mode="primitive-smart",
+                        identity_values=(value,),
+                        occurrence=occurrence,
+                    ),
                 )
             )
             continue
+        child_node = diff_values(
+            child_path,
+            left_index[identity],
+            right_index[identity],
+            array_mode="smart",
+            match_rules=_empty_match_rules(),
+        )
         children.append(
-            diff_values(
-                child_path,
-                left_index[identity],
-                right_index[identity],
-                array_mode="smart",
-                match_rules=_empty_match_rules(),
+            _with_match_info(
+                child_node,
+                MatchInfo(
+                    mode="primitive-smart",
+                    identity_values=(value,),
+                    occurrence=occurrence,
+                ),
             )
         )
 
@@ -329,6 +347,11 @@ def _diff_object_array_by_identity(
                     kind=DiffKind.ADDED,
                     right=right_index[identity],
                     children={},
+                    match_info=MatchInfo(
+                        mode="object-smart",
+                        identity_keys=tuple(identity_keys),
+                        identity_values=tuple(identity_values),
+                    ),
                 )
             )
             continue
@@ -339,16 +362,29 @@ def _diff_object_array_by_identity(
                     kind=DiffKind.REMOVED,
                     left=left_index[identity],
                     children={},
+                    match_info=MatchInfo(
+                        mode="object-smart",
+                        identity_keys=tuple(identity_keys),
+                        identity_values=tuple(identity_values),
+                    ),
                 )
             )
             continue
+        child_node = diff_values(
+            child_path,
+            left_index[identity],
+            right_index[identity],
+            array_mode=array_mode,
+            match_rules=match_rules,
+        )
         children.append(
-            diff_values(
-                child_path,
-                left_index[identity],
-                right_index[identity],
-                array_mode=array_mode,
-                match_rules=match_rules,
+            _with_match_info(
+                child_node,
+                MatchInfo(
+                    mode="object-smart",
+                    identity_keys=tuple(identity_keys),
+                    identity_values=tuple(identity_values),
+                ),
             )
         )
 
@@ -499,6 +535,19 @@ def _build_text_diff(left: JsonValue, right: JsonValue) -> TextDiff | None:
     if not isinstance(left, str) or not isinstance(right, str):
         return None
     return TextDiff(diff_strings(left, right))
+
+
+def _with_match_info(node: DiffNode, match_info: MatchInfo) -> DiffNode:
+    return DiffNode(
+        path=node.path,
+        kind=node.kind,
+        left=node.left,
+        right=node.right,
+        children=node.children,
+        text_diff=node.text_diff,
+        display_path=node.display_path,
+        match_info=match_info,
+    )
 
 
 def _empty_children_for(value: JsonValue) -> dict[str, DiffNode] | tuple[DiffNode, ...]:

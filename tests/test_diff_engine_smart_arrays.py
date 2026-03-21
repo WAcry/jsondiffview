@@ -27,6 +27,11 @@ def test_smart_object_array_matches_by_yaml_rule():
 
     assert node.kind is DiffKind.ARRAY
     assert node.children[0].path == 'countries[id=2,source="seed"]'
+    assert node.children[0].display_path == 'countries[id=2,source="seed"]'
+    assert node.children[0].match_info is not None
+    assert node.children[0].match_info.mode == "object-smart"
+    assert node.children[0].match_info.identity_keys == ("id", "source")
+    assert node.children[0].match_info.identity_values == (2, "seed")
     assert node.children[0].kind is DiffKind.OBJECT
     assert node.children[0].children["capital"].path == 'countries[id=2,source="seed"].capital'
     assert node.children[0].children["capital"].kind is DiffKind.REPLACED
@@ -56,6 +61,11 @@ def test_duplicate_primitive_values_are_matched_by_occurrence_order():
 
     assert node.kind is DiffKind.ARRAY
     assert node.children[1].path == 'languages[value="english"#1]'
+    assert node.children[1].display_path == 'languages[value="english"#1]'
+    assert node.children[1].match_info is not None
+    assert node.children[1].match_info.mode == "primitive-smart"
+    assert node.children[1].match_info.identity_values == ("english",)
+    assert node.children[1].match_info.occurrence == 1
     assert node.children[1].kind is DiffKind.REMOVED
     assert node.children[1].left == "english"
     assert node.children[2].path == 'languages[value="inglés"#0]'

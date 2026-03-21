@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 from .text_diff import TextDiff
 
@@ -32,6 +32,14 @@ class DiffKind(str, Enum):
 
 
 @dataclass(frozen=True)
+class MatchInfo:
+    mode: Literal["position", "primitive-smart", "object-smart"]
+    identity_keys: tuple[str, ...] = ()
+    identity_values: tuple[JsonScalar, ...] = ()
+    occurrence: int | None = None
+
+
+@dataclass(frozen=True)
 class DiffNode:
     path: str
     kind: DiffKind
@@ -39,6 +47,12 @@ class DiffNode:
     right: JsonValue | _MissingValue = MISSING
     children: DiffChildren = ()
     text_diff: TextDiff | None = None
+    display_path: str | None = None
+    match_info: MatchInfo | None = None
+
+    def __post_init__(self) -> None:
+        if self.display_path is None:
+            object.__setattr__(self, "display_path", self.path)
 
     @property
     def has_changes(self) -> bool:
