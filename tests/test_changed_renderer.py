@@ -1,3 +1,5 @@
+import sys
+
 from json_diff_cli.diff_engine import diff_values
 from json_diff_cli.renderers.changed import render_changed
 
@@ -63,3 +65,24 @@ def test_changed_renderer_sorts_added_object_preview_when_requested():
     )
 
     assert 'new: {"a": 2, "b": 1}' in rendered
+
+
+def test_changed_renderer_omits_root_path_in_top_level_header():
+    rendered = render_changed(diff_node_for("old", "new"), color="never")
+
+    assert rendered.splitlines()[0] == "(replace)"
+
+
+def test_changed_renderer_auto_non_tty_uses_plain_string_preview(monkeypatch):
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: False)
+
+    rendered = render_changed(
+        diff_node_for({"word": "english"}, {"word": "inglés"}),
+        color="auto",
+    )
+
+    assert "\x1b[" not in rendered
+    assert "[-" not in rendered
+    assert "[+" not in rendered
+    assert 'old: "english"' in rendered
+    assert 'new: "inglés"' in rendered

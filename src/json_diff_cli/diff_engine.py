@@ -405,7 +405,10 @@ def _validate_object_match_items(
     for item in items:
         if not isinstance(item, Mapping):
             raise UserInputError(f"Match rule for '{path}' requires object items")
-        build_object_identity(item, keys)
+        try:
+            build_object_identity(item, keys)
+        except UserInputError as exc:
+            raise UserInputError(f"Invalid match rule for '{path}': {exc}") from exc
 
 
 def _index_primitive_items(
@@ -443,7 +446,10 @@ def _index_object_items(
     for item in items:
         if not isinstance(item, Mapping):
             raise UserInputError(f"Match rule for '{path}' requires object items")
-        identity = build_object_identity(item, keys)
+        try:
+            identity = build_object_identity(item, keys)
+        except UserInputError as exc:
+            raise UserInputError(f"Invalid match rule for '{path}': {exc}") from exc
         identity_values = [value for _, value in identity]
         child_path = canonical_object_path(path, keys, identity_values)
         if identity in indexed:

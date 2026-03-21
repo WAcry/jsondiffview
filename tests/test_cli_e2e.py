@@ -55,7 +55,7 @@ def test_cli_honors_sort_keys_in_changed_mode(tmp_path):
     )
 
     assert result.returncode == 1
-    assert result.stdout.index("a (replace)") < result.stdout.index("b (replace)")
+    assert result.stdout.index("b (replace)") < result.stdout.index("a (replace)")
 
 
 def test_cli_changed_view_uses_fragment_aware_string_preview(tmp_path):

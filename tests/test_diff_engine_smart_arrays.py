@@ -147,13 +147,33 @@ def test_missing_declared_key_raises_error():
     left = [{"id": 1, "source": "seed"}]
     right = [{"id": 1}]
 
-    with pytest.raises(UserInputError, match="Missing match key 'source'"):
+    with pytest.raises(
+        UserInputError,
+        match=r"countries.*Missing match key 'source'",
+    ):
         diff_values(
             "countries",
             left,
             right,
             array_mode="smart",
             match_rules=rules_for(path="countries", keys=[["id", "source"]]),
+        )
+
+
+def test_non_scalar_match_key_error_includes_array_path():
+    left = [{"identity": {"id": {"value": 1}}}]
+    right = [{"identity": {"id": {"value": 1}}}]
+
+    with pytest.raises(
+        UserInputError,
+        match=r"countries.*identity\.id.*scalar",
+    ):
+        diff_values(
+            "countries",
+            left,
+            right,
+            array_mode="smart",
+            match_rules=rules_for(path="countries", keys=[["identity.id"]]),
         )
 
 

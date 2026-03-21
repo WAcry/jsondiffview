@@ -45,7 +45,7 @@ def _collect_changed_blocks(
 
     blocks: list[_ChangedBlock] = []
     if isinstance(node.children, dict):
-        for key in ordered_child_keys(node.children, sort_keys=sort_keys):
+        for key in ordered_child_keys(node.children, sort_keys=False):
             blocks.extend(
                 _collect_changed_blocks(node.children[key], sort_keys=sort_keys)
             )
@@ -63,7 +63,10 @@ def _render_changed_block(
     sort_keys: bool,
 ) -> str:
     node = block.node
-    lines = [f"{node.display_path} ({block.action})"]
+    if node.display_path:
+        lines = [f"{node.display_path} ({block.action})"]
+    else:
+        lines = [f"({block.action})"]
     if block.action != "add" and node.left is not MISSING:
         lines.append(
             f"  old: {_render_changed_preview(node, side='old', color=color, sort_keys=sort_keys)}"

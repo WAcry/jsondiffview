@@ -131,11 +131,17 @@ def format_changed_string_preview(
         if fragment.role == "remove":
             if mode == "new":
                 continue
+            if color_mode == "plain":
+                rendered_parts.append(_json_string_inner(fragment.text))
+                continue
             rendered_parts.append(
                 _format_changed_fragment(_json_string_inner(fragment.text), "remove", color_mode)
             )
             continue
         if mode == "old":
+            continue
+        if color_mode == "plain":
+            rendered_parts.append(_json_string_inner(fragment.text))
             continue
         rendered_parts.append(
             _format_changed_fragment(_json_string_inner(fragment.text), "add", color_mode)
