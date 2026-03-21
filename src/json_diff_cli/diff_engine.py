@@ -211,6 +211,25 @@ def _diff_array_smart(
             )
         return _diff_primitive_array_by_value(path, left, right)
 
+    if not all(isinstance(item, Mapping) for item in merged_items):
+        if candidates:
+            raise UserInputError(f"Match rule for '{path}' requires object items")
+        if _json_values_equal(left, right):
+            return DiffNode(
+                path=path,
+                kind=DiffKind.UNCHANGED,
+                left=list(left),
+                right=list(right),
+                children=(),
+            )
+        return _diff_array_positionally(
+            path,
+            left,
+            right,
+            array_mode="smart",
+            match_rules=match_rules,
+        )
+
     keys = resolve_object_key_rule(path, merged_items, match_rules)
     if keys is None:
         if _json_values_equal(left, right):

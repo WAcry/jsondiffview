@@ -232,3 +232,21 @@ def test_smart_mode_falls_back_to_positional_when_higher_priority_candidates_are
     assert node.children[0].path == "countries[0]"
     assert node.children[0].kind is DiffKind.OBJECT
     assert node.children[0].children["code"].kind is DiffKind.REPLACED
+
+
+def test_mixed_array_with_explicit_object_match_candidate_fails_fast():
+    left = [{"id": 1}, "legacy"]
+    right = [{"id": 1}, "legacy"]
+
+    with pytest.raises(UserInputError, match=r"countries.*requires object items"):
+        diff_values(
+            "countries",
+            left,
+            right,
+            array_mode="smart",
+            match_rules=MatchRuleSet(
+                cli_global_keys=["id"],
+                yaml_global_keys=[],
+                yaml_path_keys={},
+            ),
+        )
