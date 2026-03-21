@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import json
 
 from .errors import UserInputError
@@ -27,6 +28,7 @@ def needs_path_escape(key: str) -> bool:
     return not key.isidentifier()
 
 
+@lru_cache(maxsize=None)
 def parse_rule_path(path: str) -> tuple[PathSegment, ...]:
     segments = _parse_path(path, allow_array_indexes=False, error_label="match")
     _validate_rule_segments(path, segments)

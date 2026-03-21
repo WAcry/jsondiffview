@@ -60,6 +60,23 @@ def test_all_matching_yaml_path_candidates_are_considered_before_global_fallback
     ) == ["name"]
 
 
+def test_more_specific_path_rule_does_not_fall_through_to_broader_path_rule():
+    rules = MatchRuleSet(
+        cli_global_keys=[],
+        yaml_global_keys=[],
+        yaml_path_keys={
+            "countries.*.cities": [["id"]],
+            "countries.regions.cities": [["name"]],
+        },
+    )
+
+    assert resolve_object_key_rule(
+        "countries.regions.cities",
+        [{"id": 1}],
+        rules,
+    ) is None
+
+
 def test_wildcard_yaml_path_rule_matches_selector_value_containing_closing_bracket():
     rules = MatchRuleSet(
         cli_global_keys=[],

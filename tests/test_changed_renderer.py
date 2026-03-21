@@ -67,6 +67,28 @@ def test_changed_renderer_sorts_added_object_preview_when_requested():
     assert 'new: {"a": 2, "b": 1}' in rendered
 
 
+def test_changed_renderer_removed_block_emits_only_old_preview():
+    rendered = render_changed(
+        diff_node_for({"obj": {"a": 1}}, {}),
+        color="never",
+    )
+
+    assert rendered.splitlines()[0] == "obj (remove)"
+    assert 'old: {"a": 1}' in rendered
+    assert "new:" not in rendered
+
+
+def test_changed_renderer_replaced_container_emits_old_and_new_previews():
+    rendered = render_changed(
+        diff_node_for({"obj": {"a": 1}}, {"obj": [1, 2]}),
+        color="never",
+    )
+
+    assert rendered.splitlines()[0] == "obj (replace)"
+    assert 'old: {"a": 1}' in rendered
+    assert "new: [1, 2]" in rendered
+
+
 def test_changed_renderer_omits_root_path_in_top_level_header():
     rendered = render_changed(diff_node_for("old", "new"), color="never")
 

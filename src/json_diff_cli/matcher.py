@@ -86,11 +86,9 @@ def _lookup_yaml_path_candidates(
             )
 
     matched_patterns.sort(key=lambda item: (-item[0], item[1]))
-
-    matched_candidates: list[list[str]] = []
-    for _, _, candidates in matched_patterns:
-        matched_candidates.extend(candidates)
-    return matched_candidates or None
+    if not matched_patterns:
+        return None
+    return matched_patterns[0][2]
 
 
 def _first_applicable_candidate(
