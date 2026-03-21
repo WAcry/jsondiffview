@@ -26,14 +26,6 @@ def diff_values(
     effective_rules = match_rules or _empty_match_rules()
 
     if isinstance(left, Mapping) and isinstance(right, Mapping):
-        if _json_values_equal(left, right):
-            return DiffNode(
-                path=path,
-                kind=DiffKind.UNCHANGED,
-                left=left,
-                right=right,
-                children=_empty_children_for(left),
-            )
         return _diff_object(
             path,
             left,
@@ -100,6 +92,15 @@ def _diff_object(
             right[key],
             array_mode=array_mode,
             match_rules=match_rules,
+        )
+
+    if all(child.kind is DiffKind.UNCHANGED for child in children.values()):
+        return DiffNode(
+            path=path,
+            kind=DiffKind.UNCHANGED,
+            left=dict(left),
+            right=dict(right),
+            children={},
         )
 
     return DiffNode(

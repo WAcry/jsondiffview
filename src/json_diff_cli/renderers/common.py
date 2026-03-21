@@ -106,6 +106,11 @@ def format_changed_value(
 ) -> str:
     text = json_preview(value, sort_keys=sort_keys)
     color_mode = resolve_color_mode(color)
+    if color_mode == "markers":
+        if role == "add":
+            return f"[+{text}+]"
+        if role == "remove":
+            return f"[-{text}-]"
     if color_mode != "ansi":
         return text
     if role == "add":

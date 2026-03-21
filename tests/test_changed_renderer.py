@@ -64,7 +64,7 @@ def test_changed_renderer_sorts_added_object_preview_when_requested():
         sort_keys=True,
     )
 
-    assert 'new: {"a": 2, "b": 1}' in rendered
+    assert 'new: [+{"a": 2, "b": 1}+]' in rendered
 
 
 def test_changed_renderer_sorts_removed_object_preview_when_requested():
@@ -74,7 +74,7 @@ def test_changed_renderer_sorts_removed_object_preview_when_requested():
         sort_keys=True,
     )
 
-    assert 'old: {"a": 2, "b": 1}' in rendered
+    assert 'old: [-{"a": 2, "b": 1}-]' in rendered
 
 
 def test_changed_renderer_colors_added_object_preview_when_requested():
@@ -86,6 +86,25 @@ def test_changed_renderer_colors_added_object_preview_when_requested():
     assert "\x1b[" in rendered
 
 
+def test_changed_renderer_marks_added_object_preview_when_color_never():
+    rendered = render_changed(
+        diff_node_for({}, {"obj": {"a": 1}}),
+        color="never",
+    )
+
+    assert 'new: [+{"a": 1}+] ' not in rendered
+    assert 'new: [+{"a": 1}+]' in rendered
+
+
+def test_changed_renderer_marks_removed_object_preview_when_color_never():
+    rendered = render_changed(
+        diff_node_for({"obj": {"a": 1}}, {}),
+        color="never",
+    )
+
+    assert 'old: [-{"a": 1}-]' in rendered
+
+
 def test_changed_renderer_removed_block_emits_only_old_preview():
     rendered = render_changed(
         diff_node_for({"obj": {"a": 1}}, {}),
@@ -93,7 +112,7 @@ def test_changed_renderer_removed_block_emits_only_old_preview():
     )
 
     assert rendered.splitlines()[0] == "obj (remove)"
-    assert 'old: {"a": 1}' in rendered
+    assert 'old: [-{"a": 1}-]' in rendered
     assert "new:" not in rendered
 
 
@@ -104,8 +123,8 @@ def test_changed_renderer_replaced_container_emits_old_and_new_previews():
     )
 
     assert rendered.splitlines()[0] == "obj (replace)"
-    assert 'old: {"a": 1}' in rendered
-    assert "new: [1, 2]" in rendered
+    assert 'old: [-{"a": 1}-]' in rendered
+    assert "new: [+[1, 2]+]" in rendered
 
 
 def test_changed_renderer_omits_root_path_in_top_level_header():

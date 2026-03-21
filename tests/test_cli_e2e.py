@@ -90,7 +90,7 @@ def test_cli_changed_view_sorts_added_object_preview(tmp_path):
     )
 
     assert result.returncode == 1
-    assert 'new: {"a": 2, "b": 1}' in result.stdout
+    assert 'new: [+{"a": 2, "b": 1}+]' in result.stdout
 
 
 def test_quiet_mode_still_returns_one_without_stdout(tmp_path):

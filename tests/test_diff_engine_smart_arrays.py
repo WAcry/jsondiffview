@@ -288,3 +288,20 @@ def test_mixed_array_with_explicit_object_match_candidate_fails_fast():
                 yaml_path_keys={},
             ),
         )
+
+
+def test_nested_equal_object_still_validates_invalid_smart_array_rule():
+    left = {"countries": [{"identity": {"id": {"value": 1}}}]}
+    right = {"countries": [{"identity": {"id": {"value": 1}}}]}
+
+    with pytest.raises(
+        UserInputError,
+        match=r"countries.*identity\.id.*scalar",
+    ):
+        diff_values(
+            "",
+            left,
+            right,
+            array_mode="smart",
+            match_rules=rules_for(path="countries", keys=[["identity.id"]]),
+        )
