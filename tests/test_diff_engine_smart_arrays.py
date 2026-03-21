@@ -37,6 +37,24 @@ def test_smart_object_array_matches_by_yaml_rule():
     assert node.children[0].children["capital"].kind is DiffKind.REPLACED
 
 
+def test_smart_object_array_matches_by_bracket_literal_candidate_key_path():
+    left = [{"identity": {"a.b": 1}, "capital": "Buenos Aires"}]
+    right = [{"identity": {"a.b": 1}, "capital": "Rawson"}]
+
+    node = diff_values(
+        "countries",
+        left,
+        right,
+        array_mode="smart",
+        match_rules=rules_for(path="countries", keys=[['identity["a.b"]']]),
+    )
+
+    assert node.kind is DiffKind.ARRAY
+    assert node.children[0].path == 'countries[identity["a.b"]=1]'
+    assert node.children[0].kind is DiffKind.OBJECT
+    assert node.children[0].children["capital"].kind is DiffKind.REPLACED
+
+
 def test_duplicate_object_identity_raises_error():
     left = [{"id": 1}, {"id": 1}]
     right = [{"id": 1}]

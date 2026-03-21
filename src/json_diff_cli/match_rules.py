@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from .errors import UserInputError
-from .path_syntax import parse_rule_path
+from .path_syntax import parse_object_key_path, parse_rule_path
 from .types import MatchRuleSet
 
 
@@ -74,7 +74,9 @@ def _parse_candidate_groups(value: object, *, context: str) -> list[list[str]]:
     normalized: list[list[str]] = []
     for candidate in value:
         if isinstance(candidate, str):
-            normalized.append([_require_string(candidate, context=context)])
+            key_path = _require_string(candidate, context=context)
+            parse_object_key_path(key_path)
+            normalized.append([key_path])
             continue
 
         if not isinstance(candidate, list):
@@ -85,9 +87,12 @@ def _parse_candidate_groups(value: object, *, context: str) -> list[list[str]]:
         if not candidate:
             raise UserInputError(f"{context} composite entries must not be empty")
 
-        normalized.append(
-            [_require_string(key, context=context) for key in candidate]
-        )
+        normalized_group: list[str] = []
+        for key in candidate:
+            key_path = _require_string(key, context=context)
+            parse_object_key_path(key_path)
+            normalized_group.append(key_path)
+        normalized.append(normalized_group)
 
     return normalized
 

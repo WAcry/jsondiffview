@@ -35,6 +35,23 @@ def parse_rule_path(path: str) -> tuple[PathSegment, ...]:
     return tuple(segments)
 
 
+@lru_cache(maxsize=None)
+def parse_object_key_path(path: str) -> tuple[str, ...]:
+    segments = _parse_path(path, allow_array_indexes=False, error_label="match")
+    if not segments:
+        raise UserInputError(f"Invalid match key path: {path}")
+
+    normalized: list[str] = []
+    for segment in segments:
+        if segment.is_wildcard and not segment.is_quoted_literal:
+            raise UserInputError(f"Invalid match key path: {path}")
+        if not segment.is_quoted_literal and "*" in segment.value:
+            raise UserInputError(f"Invalid match key path: {path}")
+        normalized.append(segment.value)
+
+    return tuple(normalized)
+
+
 def match_rule_path(
     pattern: tuple[PathSegment, ...] | list[PathSegment],
     runtime_path: str,

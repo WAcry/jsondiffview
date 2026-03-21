@@ -7,6 +7,7 @@ from .errors import UserInputError
 from .path_syntax import (
     append_object_path,
     match_rule_path,
+    parse_object_key_path,
     parse_rule_path,
     rule_path_specificity,
 )
@@ -116,7 +117,7 @@ def _candidate_applies(candidate: list[str], items: list[object]) -> bool:
 
 def _has_dotted_key(value: Mapping[str, object], dotted_key: str) -> bool:
     current: object = value
-    for segment in dotted_key.split("."):
+    for segment in parse_object_key_path(dotted_key):
         if not isinstance(current, Mapping) or segment not in current:
             return False
         current = current[segment]
@@ -125,7 +126,7 @@ def _has_dotted_key(value: Mapping[str, object], dotted_key: str) -> bool:
 
 def _resolve_dotted_key(value: Mapping[str, object], dotted_key: str) -> object:
     current: object = value
-    for segment in dotted_key.split("."):
+    for segment in parse_object_key_path(dotted_key):
         if not isinstance(current, Mapping) or segment not in current:
             raise UserInputError(f"Missing match key '{dotted_key}'")
         current = current[segment]

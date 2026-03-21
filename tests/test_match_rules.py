@@ -21,6 +21,18 @@ def test_match_config_from_mapping_normalizes_scalar_and_composite_candidates():
     }
 
 
+def test_match_config_accepts_bracket_literal_candidate_key_path():
+    config = MatchConfig.from_mapping(
+        {
+            "path_matches": {
+                "countries": [['identity["a.b"]']],
+            },
+        }
+    )
+
+    assert config.path_matches["countries"] == [['identity["a.b"]']]
+
+
 def test_match_config_from_mapping_rejects_non_mapping_root():
     with pytest.raises(UserInputError, match="mapping"):
         MatchConfig.from_mapping(["id"])
@@ -37,6 +49,28 @@ def test_build_match_rule_set_uses_empty_config_when_none():
 def test_build_match_rule_set_rejects_dotted_cli_match_keys():
     with pytest.raises(UserInputError, match="identity\\.id"):
         build_match_rule_set(["identity.id"], None)
+
+
+def test_match_config_rejects_wildcard_candidate_key_path():
+    with pytest.raises(UserInputError, match=r"a\[\*\]"):
+        MatchConfig.from_mapping(
+            {
+                "path_matches": {
+                    "countries": [["a[*]"]],
+                },
+            }
+        )
+
+
+def test_match_config_rejects_indexed_candidate_key_path():
+    with pytest.raises(UserInputError, match=r"a\[0\]"):
+        MatchConfig.from_mapping(
+            {
+                "path_matches": {
+                    "countries": [["a[0]"]],
+                },
+            }
+        )
 
 
 def test_build_match_rule_set_preserves_yaml_and_cli_priority_data():
