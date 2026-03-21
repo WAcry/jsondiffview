@@ -8,6 +8,9 @@ def test_help_exits_zero():
     result = run_cli("--help")
     assert result.returncode == 0
     assert "json-diff FILE_A FILE_B" in result.stdout
+    assert "--view {full,changed}" in result.stdout
+    assert "focused" not in result.stdout
+    assert "--context-lines" not in result.stdout
 
 
 def test_missing_args_exits_two():
@@ -64,6 +67,13 @@ def test_parser_rejects_removed_context_lines_option():
     parser = build_parser()
     with pytest.raises(SystemExit):
         parser.parse_args(["left.json", "right.json", "--context-lines", "1"])
+
+
+def test_cli_rejects_removed_context_lines_option():
+    result = run_cli("left.json", "right.json", "--context-lines", "1")
+
+    assert result.returncode == 2
+    assert "--context-lines" in result.stderr
 
 
 def test_renderer_failure_returns_three_with_stderr_diagnostic(

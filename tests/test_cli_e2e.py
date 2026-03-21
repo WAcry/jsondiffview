@@ -56,3 +56,37 @@ def test_cli_honors_sort_keys_in_changed_mode(tmp_path):
 
     assert result.returncode == 1
     assert result.stdout.index("a (replace)") < result.stdout.index("b (replace)")
+
+
+def test_quiet_mode_still_returns_one_without_stdout(tmp_path):
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    left.write_text('{"capital": "Buenos Aires"}', encoding="utf-8")
+    right.write_text('{"capital": "Rawson"}', encoding="utf-8")
+
+    result = run_cli(str(left), str(right), "--quiet")
+
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+def test_invalid_yaml_config_returns_two_with_stderr(tmp_path):
+    left = tmp_path / "left.json"
+    right = tmp_path / "right.json"
+    config = tmp_path / "rules.yaml"
+    left.write_text('{"capital": "Buenos Aires"}', encoding="utf-8")
+    right.write_text('{"capital": "Rawson"}', encoding="utf-8")
+    config.write_text("global_matches: [", encoding="utf-8")
+
+    result = run_cli(
+        str(left),
+        str(right),
+        "--match-config",
+        str(config),
+    )
+
+    assert result.returncode == 2
+    assert "Invalid YAML:" in result.stderr
+    assert "line" in result.stderr
+    assert result.stdout == ""
