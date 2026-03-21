@@ -8,26 +8,18 @@ from .diff_engine import diff_values
 from .errors import UserInputError
 from .loader import load_json_file, load_match_config
 from .match_rules import build_match_rule_set
-from .renderers import render_focused, render_full
-
-
-def parse_non_negative_int(value: str) -> int:
-    parsed = int(value)
-    if parsed < 0:
-        raise argparse.ArgumentTypeError("must be a non-negative integer")
-    return parsed
+from .renderers import render_changed, render_full
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="json-diff", usage="json-diff FILE_A FILE_B")
     parser.add_argument("file_a", nargs="?", metavar="FILE_A")
     parser.add_argument("file_b", nargs="?", metavar="FILE_B")
-    parser.add_argument("--view", choices=("full", "focused"), default="full")
+    parser.add_argument("--view", choices=("full", "changed"), default="full")
     parser.add_argument("--color", choices=("auto", "always", "never"), default="auto")
     parser.add_argument("--array-match", choices=("position", "smart"), default="position")
     parser.add_argument("--match", action="append", default=[])
     parser.add_argument("--match-config")
-    parser.add_argument("--context-lines", type=parse_non_negative_int, default=2)
     parser.add_argument("--sort-keys", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--version", action="store_true")
@@ -67,7 +59,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             diff,
             view=args.view,
             color=args.color,
-            context_lines=args.context_lines,
             sort_keys=args.sort_keys,
         )
         if rendered:
@@ -90,16 +81,10 @@ def _render_output(
     *,
     view: str,
     color: str,
-    context_lines: int,
     sort_keys: bool,
 ) -> str:
-    if view == "focused":
-        return render_focused(
-            diff,
-            color=color,
-            context_lines=context_lines,
-            sort_keys=sort_keys,
-        )
+    if view == "changed":
+        return render_changed(diff, color=color, sort_keys=sort_keys)
     return render_full(diff, color=color, sort_keys=sort_keys)
 
 

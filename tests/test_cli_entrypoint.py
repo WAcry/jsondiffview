@@ -36,7 +36,7 @@ def test_parser_accepts_full_option_surface():
             "left.json",
             "right.json",
             "--view",
-            "focused",
+            "changed",
             "--color",
             "never",
             "--array-match",
@@ -47,26 +47,23 @@ def test_parser_accepts_full_option_surface():
             "name",
             "--match-config",
             "rules.yaml",
-            "--context-lines",
-            "2",
             "--sort-keys",
             "--quiet",
         ]
     )
-    assert args.view == "focused"
+    assert args.view == "changed"
     assert args.color == "never"
     assert args.array_match == "smart"
     assert args.match == ["id", "name"]
     assert args.match_config == "rules.yaml"
-    assert args.context_lines == 2
     assert args.sort_keys is True
     assert args.quiet is True
 
 
-def test_parser_rejects_negative_context_lines():
+def test_parser_rejects_removed_context_lines_option():
     parser = build_parser()
     with pytest.raises(SystemExit):
-        parser.parse_args(["left.json", "right.json", "--context-lines", "-1"])
+        parser.parse_args(["left.json", "right.json", "--context-lines", "1"])
 
 
 def test_renderer_failure_returns_three_with_stderr_diagnostic(

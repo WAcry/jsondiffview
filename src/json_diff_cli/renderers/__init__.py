@@ -1,4 +1,4 @@
+from .changed import render_changed
 from .full import render_full
-from .focused import render_focused
 
-__all__ = ["render_full", "render_focused"]
+__all__ = ["render_changed", "render_full"]

@@ -7,10 +7,10 @@ def test_cli_returns_one_when_diff_exists(tmp_path):
     left.write_text('{"capital": "Buenos Aires"}', encoding="utf-8")
     right.write_text('{"capital": "Rawson"}', encoding="utf-8")
 
-    result = run_cli(str(left), str(right), "--view", "focused", "--color", "never")
+    result = run_cli(str(left), str(right), "--view", "changed", "--color", "never")
 
     assert result.returncode == 1
-    assert "capital" in result.stdout
+    assert "capital (replace)" in result.stdout
     assert result.stderr == ""
 
 
@@ -38,7 +38,7 @@ def test_invalid_json_returns_two(tmp_path):
     assert result.returncode == 2
 
 
-def test_cli_honors_sort_keys_in_focused_mode(tmp_path):
+def test_cli_honors_sort_keys_in_changed_mode(tmp_path):
     left = tmp_path / "left.json"
     right = tmp_path / "right.json"
     left.write_text('{"b": 1, "a": 2}', encoding="utf-8")
@@ -48,11 +48,11 @@ def test_cli_honors_sort_keys_in_focused_mode(tmp_path):
         str(left),
         str(right),
         "--view",
-        "focused",
+        "changed",
         "--sort-keys",
         "--color",
         "never",
     )
 
     assert result.returncode == 1
-    assert result.stdout.index("a\n{") < result.stdout.index("b\n{")
+    assert result.stdout.index("a (replace)") < result.stdout.index("b (replace)")
