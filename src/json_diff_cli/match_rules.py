@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any, Mapping
 
 from .errors import UserInputError
+from .path_syntax import parse_rule_path
 from .types import MatchRuleSet
 
 
@@ -54,7 +54,7 @@ def build_match_rule_set(
     effective_config = config or MatchConfig(global_matches=[], path_matches={})
 
     for path in effective_config.path_matches:
-        _validate_rule_path(path)
+        parse_rule_path(path)
 
     return MatchRuleSet(
         cli_global_keys=list(normalized_cli_keys),
@@ -102,101 +102,3 @@ def _validate_cli_match_key(value: object) -> str:
     if any(marker in key for marker in (".", "[", "]", "*")):
         raise UserInputError(f"Invalid CLI match key: {key}")
     return key
-
-
-def _validate_rule_path(path: str) -> None:
-    segments = _split_rule_path_segments(path)
-    if not segments:
-        raise UserInputError(f"Invalid match path: {path}")
-
-    for index, (segment, is_escaped) in enumerate(segments):
-        if segment == "*":
-            if is_escaped:
-                continue
-            if index == 0 or index == len(segments) - 1:
-                raise UserInputError(f"Invalid match path: {path}")
-            previous_segment, previous_is_escaped = segments[index - 1]
-            next_segment, next_is_escaped = segments[index + 1]
-            if (
-                previous_segment == "*" and not previous_is_escaped
-            ) or (
-                next_segment == "*" and not next_is_escaped
-            ):
-                raise UserInputError(f"Invalid match path: {path}")
-            continue
-        if not is_escaped and "*" in segment:
-            raise UserInputError(f"Invalid match path: {path}")
-
-
-def _split_rule_path_segments(path: str) -> list[tuple[str, bool]]:
-    segments: list[tuple[str, bool]] = []
-    buffer: list[str] = []
-    index = 0
-
-    while index < len(path):
-        char = path[index]
-        if char == ".":
-            if not buffer:
-                raise UserInputError(f"Invalid match path: {path}")
-            segments.append(("".join(buffer), False))
-            buffer.clear()
-            index += 1
-            continue
-        if char == "[":
-            if buffer:
-                segments.append(("".join(buffer), False))
-                buffer.clear()
-            close_index = _find_segment_end(path, index)
-            segments.append(
-                (_decode_rule_literal_segment(path[index + 1 : close_index], path), True)
-            )
-            index = close_index + 1
-            if index < len(path) and path[index] not in ".[":
-                raise UserInputError(f"Invalid match path: {path}")
-            if index < len(path) and path[index] == ".":
-                index += 1
-                if index == len(path):
-                    raise UserInputError(f"Invalid match path: {path}")
-            continue
-        buffer.append(char)
-        index += 1
-
-    if buffer:
-        segments.append(("".join(buffer), False))
-    elif path.endswith("."):
-        raise UserInputError(f"Invalid match path: {path}")
-
-    return segments
-
-
-def _find_segment_end(path: str, start_index: int) -> int:
-    in_string = False
-    is_escaped = False
-    index = start_index + 1
-
-    while index < len(path):
-        char = path[index]
-        if in_string:
-            if is_escaped:
-                is_escaped = False
-            elif char == "\\":
-                is_escaped = True
-            elif char == '"':
-                in_string = False
-        elif char == '"':
-            in_string = True
-        elif char == "]":
-            return index
-        index += 1
-
-    raise UserInputError(f"Invalid match path: {path}")
-
-
-def _decode_rule_literal_segment(raw_segment: str, path: str) -> str:
-    try:
-        decoded = json.loads(raw_segment)
-    except json.JSONDecodeError as exc:
-        raise UserInputError(f"Invalid match path: {path}") from exc
-    if not isinstance(decoded, str):
-        raise UserInputError(f"Invalid match path: {path}")
-    return decoded

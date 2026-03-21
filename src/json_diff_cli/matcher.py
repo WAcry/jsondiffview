@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from collections.abc import Mapping, Sequence
 
 from .errors import UserInputError
-from .path_syntax import append_object_path
+from .path_syntax import (
+    append_object_path,
+    match_rule_path,
+    parse_rule_path,
+    rule_path_specificity,
+)
 from .types import MatchRuleSet
-
-
-@dataclass(frozen=True)
-class _PathSegment:
-    value: str
-    is_wildcard: bool = False
-    is_quoted_literal: bool = False
-    is_array_index: bool = False
 
 
 def resolve_object_key_rule(
@@ -81,13 +77,12 @@ def _lookup_yaml_path_candidates(
     runtime_path: str,
     yaml_path_keys: dict[str, list[list[str]]],
 ) -> list[list[str]] | None:
-    runtime_segments = _split_runtime_path(runtime_path)
     matched_patterns: list[tuple[int, int, list[list[str]]]] = []
     for order, (pattern, candidates) in enumerate(yaml_path_keys.items()):
-        pattern_segments = _split_rule_path(pattern)
-        if _path_pattern_matches(pattern_segments, runtime_segments):
+        pattern_segments = parse_rule_path(pattern)
+        if match_rule_path(pattern_segments, runtime_path):
             matched_patterns.append(
-                (_path_specificity(pattern_segments), order, candidates)
+                (rule_path_specificity(pattern_segments), order, candidates)
             )
 
     matched_patterns.sort(key=lambda item: (-item[0], item[1]))
@@ -138,157 +133,6 @@ def _resolve_dotted_key(value: Mapping[str, object], dotted_key: str) -> object:
         current = current[segment]
     return current
 
-
-def _path_pattern_matches(
-    pattern_segments: list[_PathSegment],
-    runtime_segments: list[_PathSegment],
-) -> bool:
-    if len(pattern_segments) != len(runtime_segments):
-        return False
-
-    for pattern_segment, runtime_segment in zip(pattern_segments, runtime_segments):
-        if pattern_segment.is_wildcard:
-            continue
-        if runtime_segment.is_array_index:
-            return False
-        if pattern_segment.value != runtime_segment.value:
-            return False
-    return True
-
-
-def _path_specificity(pattern_segments: list[_PathSegment]) -> int:
-    return sum(not segment.is_wildcard for segment in pattern_segments)
-
-
-def _split_rule_path(path: str) -> list[_PathSegment]:
-    if not path:
-        return []
-
-    segments: list[_PathSegment] = []
-    buffer: list[str] = []
-    index = 0
-    while index < len(path):
-        char = path[index]
-        if char == ".":
-            if not buffer:
-                raise UserInputError(f"Invalid match path: {path}")
-            token = "".join(buffer)
-            segments.append(_PathSegment(value=token, is_wildcard=token == "*"))
-            buffer.clear()
-            index += 1
-            continue
-        if char == "[":
-            if buffer:
-                token = "".join(buffer)
-                segments.append(_PathSegment(value=token, is_wildcard=token == "*"))
-                buffer.clear()
-            close_index = _find_selector_end(path, index)
-            literal_segment = _decode_rule_literal_segment(
-                path[index + 1 : close_index],
-                path,
-            )
-            segments.append(
-                _PathSegment(value=literal_segment, is_quoted_literal=True)
-            )
-            index = close_index + 1
-            if index < len(path) and path[index] not in ".[":
-                raise UserInputError(f"Invalid match path: {path}")
-            if index < len(path) and path[index] == ".":
-                index += 1
-                if index == len(path):
-                    raise UserInputError(f"Invalid match path: {path}")
-            continue
-        buffer.append(char)
-        index += 1
-
-    if buffer:
-        token = "".join(buffer)
-        segments.append(_PathSegment(value=token, is_wildcard=token == "*"))
-    elif path.endswith("."):
-        raise UserInputError(f"Invalid match path: {path}")
-
-    return segments
-
-
-def _split_runtime_path(path: str) -> list[_PathSegment]:
-    if not path:
-        return []
-
-    segments: list[_PathSegment] = []
-    buffer: list[str] = []
-    index = 0
-    while index < len(path):
-        char = path[index]
-        if char == ".":
-            if buffer:
-                segments.append(_PathSegment(value="".join(buffer)))
-                buffer.clear()
-            index += 1
-            continue
-        if char == "[":
-            if buffer:
-                segments.append(_PathSegment(value="".join(buffer)))
-                buffer.clear()
-            close_index = _find_selector_end(path, index)
-            segments.append(_decode_runtime_bracket_segment(path[index + 1 : close_index]))
-            index = close_index + 1
-            continue
-        buffer.append(char)
-        index += 1
-
-    if buffer:
-        segments.append(_PathSegment(value="".join(buffer)))
-
-    return segments
-
-
-def _find_selector_end(path: str, start_index: int) -> int:
-    in_string = False
-    is_escaped = False
-    index = start_index + 1
-
-    while index < len(path):
-        char = path[index]
-
-        if in_string:
-            if is_escaped:
-                is_escaped = False
-            elif char == "\\":
-                is_escaped = True
-            elif char == '"':
-                in_string = False
-        elif char == '"':
-            in_string = True
-        elif char == "]":
-            return index
-
-        index += 1
-
-    raise UserInputError(f"Invalid runtime path: {path}")
-
-
-def _decode_rule_literal_segment(raw_segment: str, rule_path: str) -> str:
-    decoded = _decode_json_string_segment(raw_segment)
-    if decoded is None:
-        raise UserInputError(f"Invalid match path: {rule_path}")
-    return decoded
-
-
-def _decode_runtime_bracket_segment(raw_segment: str) -> _PathSegment:
-    decoded = _decode_json_string_segment(raw_segment)
-    if decoded is not None:
-        return _PathSegment(value=decoded, is_quoted_literal=True)
-    return _PathSegment(value=raw_segment, is_array_index=raw_segment.isdigit())
-
-
-def _decode_json_string_segment(raw_segment: str) -> str | None:
-    try:
-        decoded = json.loads(raw_segment)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(decoded, str):
-        return None
-    return decoded
 
 
 def _format_identity_value(key: str, value: object) -> str:

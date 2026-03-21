@@ -2,6 +2,7 @@ import pytest
 
 from json_diff_cli.errors import UserInputError
 from json_diff_cli.match_rules import MatchConfig, build_match_rule_set
+from json_diff_cli.path_syntax import match_rule_path, parse_rule_path
 
 
 def test_match_config_from_mapping_normalizes_scalar_and_composite_candidates():
@@ -154,3 +155,16 @@ def test_build_match_rule_set_rejects_terminal_wildcard_segment():
 
     with pytest.raises(UserInputError, match="countries\\.\\*"):
         build_match_rule_set([], config)
+
+
+def test_shared_rule_path_helper_matches_wildcard_array_segment():
+    pattern = parse_rule_path("countries.*.cities")
+
+    assert match_rule_path(pattern, "countries[0].cities") is True
+
+
+def test_shared_rule_path_helper_distinguishes_literal_wildcard_key():
+    pattern = parse_rule_path('parent["*"].cities')
+
+    assert match_rule_path(pattern, 'parent["*"].cities') is True
+    assert match_rule_path(pattern, 'parent["x"].cities') is False
