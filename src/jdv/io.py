@@ -28,6 +28,8 @@ def read_json_source(path_or_dash: str, stdin_text: str | None, source_role: str
     else:
         try:
             text = Path(path_or_dash).read_text(encoding="utf-8")
+        except UnicodeError as exc:
+            raise JsonParseError(f"{source_label}: invalid UTF-8 input") from exc
         except OSError as exc:
             reason = exc.strerror or "unable to read file"
             raise JsonParseError(f"{source_label}: {reason}") from exc

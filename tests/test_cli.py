@@ -59,6 +59,19 @@ def test_zero_diff_tty_notice_respects_quiet(tmp_path, monkeypatch, capsys) -> N
     assert captured.err == ""
 
 
+def test_zero_diff_focus_and_full_print_nothing_in_non_tty(tmp_path) -> None:
+    old_path = tmp_path / "old.json"
+    new_path = tmp_path / "new.json"
+    old_path.write_text(json.dumps({"b": 2, "a": 1}), encoding="utf-8")
+    new_path.write_text(json.dumps({"a": 1, "b": 2}), encoding="utf-8")
+
+    for view in ("focus", "full"):
+        result = _run_cli(tmp_path, "--view", view, str(old_path), str(new_path))
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
+
+
 def test_invalid_view_returns_usage_error(tmp_path, capsys) -> None:
     path = tmp_path / "same.json"
     path.write_text("{}", encoding="utf-8")
@@ -137,6 +150,32 @@ def test_missing_new_file_reports_new_role(tmp_path) -> None:
 
     assert result.returncode == 2
     assert "new input (" in result.stderr
+
+
+def test_invalid_json_returns_usage_error(tmp_path) -> None:
+    invalid = tmp_path / "invalid.json"
+    valid = tmp_path / "valid.json"
+    invalid.write_text("{", encoding="utf-8")
+    valid.write_text("{}", encoding="utf-8")
+
+    result = _run_cli(tmp_path, str(invalid), str(valid))
+
+    assert result.returncode == 2
+    assert "old input (" in result.stderr
+    assert "invalid JSON" in result.stderr
+
+
+def test_invalid_utf8_returns_usage_error(tmp_path) -> None:
+    invalid = tmp_path / "invalid.json"
+    valid = tmp_path / "valid.json"
+    invalid.write_bytes(b'\xff\xfe\x00')
+    valid.write_text("{}", encoding="utf-8")
+
+    result = _run_cli(tmp_path, str(invalid), str(valid))
+
+    assert result.returncode == 2
+    assert "old input (" in result.stderr
+    assert "invalid UTF-8 input" in result.stderr
 
 
 def _run_cli(tmp_path, *args: str) -> subprocess.CompletedProcess[str]:
