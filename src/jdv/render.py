@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import sys
-from typing import Any
 
 from .model import ColorMode, LayoutPlan
-from .paths import pretty_json_lines
 
 
 def render_review_view(plan: LayoutPlan, color_mode: ColorMode) -> str:
@@ -21,17 +19,6 @@ def render_review_view(plan: LayoutPlan, color_mode: ColorMode) -> str:
             text = _apply_color(text, line.marker)
         rendered_lines.append(text)
     return "\n".join(rendered_lines)
-
-
-def render_root_replace(old_value: Any, new_value: Any) -> str:
-    lines = ["~ $:"]
-    lines.extend(_render_block("-", old_value))
-    lines.extend(_render_block("+", new_value))
-    return "\n".join(lines)
-
-
-def _render_block(marker: str, value: Any) -> list[str]:
-    return [f"  {marker} {line}" for line in pretty_json_lines(value)]
 
 
 def _apply_color(text: str, marker: str) -> str:

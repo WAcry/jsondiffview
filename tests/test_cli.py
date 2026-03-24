@@ -71,6 +71,18 @@ def test_invalid_view_returns_usage_error(tmp_path, capsys) -> None:
     assert "Invalid --view value" in captured.err
 
 
+def test_invalid_color_returns_usage_error(tmp_path, capsys) -> None:
+    path = tmp_path / "same.json"
+    path.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(typer.Exit) as exit_info:
+        main(str(path), str(path), color="weird", view="compact", quiet=False, match_key=None)
+
+    captured = capsys.readouterr()
+    assert exit_info.value.exit_code == 2
+    assert "Invalid --color value" in captured.err
+
+
 def test_cli_renders_exact_value_move(tmp_path) -> None:
     old_path = tmp_path / "old.json"
     new_path = tmp_path / "new.json"
@@ -93,6 +105,25 @@ def test_color_always_emits_ansi_for_changed_lines(tmp_path) -> None:
 
     assert result.returncode == 0
     assert "\x1b[" in result.stdout
+
+
+def test_double_stdin_returns_usage_error(tmp_path) -> None:
+    result = _run_cli(tmp_path, "-", "-")
+
+    assert result.returncode == 2
+    assert "Only one input may be read from stdin at a time" in result.stderr
+
+
+def test_missing_file_returns_usage_error(tmp_path) -> None:
+    missing = tmp_path / "missing.json"
+    result = _run_cli(tmp_path, str(missing), str(missing))
+
+    assert result.returncode == 2
+    assert (
+        "unable to read file" in result.stderr
+        or "cannot find the file" in result.stderr.lower()
+        or "no such file or directory" in result.stderr.lower()
+    )
 
 
 def _run_cli(tmp_path, *args: str) -> subprocess.CompletedProcess[str]:

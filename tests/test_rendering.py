@@ -79,7 +79,43 @@ def test_root_replace_snapshot() -> None:
     assert '+ "preview"' in text
 
 
-def _render(old_value, new_value, review_mode: ReviewMode) -> str:
-    root = diff_json(old_value, new_value, DiffSettings())
-    plan = build_display_layout(root, review_mode, DiffSettings())
+def test_compact_summary_threshold_controls_pure_added_block_summary() -> None:
+    old_value = {"meta": {}}
+    new_value = {"meta": {"a": 1, "b": 2, "c": 3}}
+
+    compact_summary = _render(
+        old_value,
+        new_value,
+        ReviewMode.COMPACT,
+        DiffSettings(compact_preview_keys=1, compact_summary_min_lines=3),
+    )
+    compact_full = _render(
+        old_value,
+        new_value,
+        ReviewMode.COMPACT,
+        DiffSettings(compact_preview_keys=1, compact_summary_min_lines=100),
+    )
+
+    assert "… 2 more added keys" in compact_summary
+    assert "… 2 more added keys" not in compact_full
+    assert '+ "b": 2' in compact_full
+
+
+def test_move_and_remove_provenance_are_consistent_across_views() -> None:
+    old_value = {"items": [{"id": "a", "v": 1}, {"id": "b", "v": 2}, {"id": "c", "v": 3}]}
+    new_value = {"items": [{"id": "b", "v": 2}, {"id": "a", "v": 4}]}
+
+    compact = _render(old_value, new_value, ReviewMode.COMPACT)
+    focus = _render(old_value, new_value, ReviewMode.FOCUS)
+    full = _render(old_value, new_value, ReviewMode.FULL)
+
+    for text in (compact, focus, full):
+        assert '> moved $.items[0] -> $.items[1] (id="a")' in text
+        assert '> removed $.items[2]' in text
+
+
+def _render(old_value, new_value, review_mode: ReviewMode, settings: DiffSettings | None = None) -> str:
+    settings = settings or DiffSettings()
+    root = diff_json(old_value, new_value, settings)
+    plan = build_display_layout(root, review_mode, settings)
     return render_review_view(plan, ColorMode.NEVER)

@@ -115,16 +115,19 @@ def _emit_added_removed_object(
     lines = [_line(indent, LayoutLineKind.OPEN, marker, _label_prefix(field_key) + "{")]
     children = sorted(node.children, key=lambda child: child.new_index if marker == "+" else child.old_index)
     preview_limit = settings.compact_preview_keys
-    preview_children = children
-    remaining = 0
-    if review_mode is ReviewMode.COMPACT and len(children) > preview_limit:
-        preview_children = children[:preview_limit]
-        remaining = len(children) - preview_limit
-
-    child_blocks = [
+    all_child_blocks = [
         _emit_added_removed_block(child, review_mode, settings, indent + 1, _field_key(child), marker)
-        for child in preview_children
+        for child in children
     ]
+    child_blocks = all_child_blocks
+    remaining = 0
+    if (
+        review_mode is ReviewMode.COMPACT
+        and len(children) > preview_limit
+        and _count_block_lines(all_child_blocks) + 2 >= settings.compact_summary_min_lines
+    ):
+        child_blocks = all_child_blocks[:preview_limit]
+        remaining = len(children) - preview_limit
     if remaining:
         noun = "added" if marker == "+" else "removed"
         child_blocks.append([_summary_line(indent + 1, marker, f"… {remaining} more {noun} keys")])
@@ -145,16 +148,19 @@ def _emit_added_removed_array(
     lines = [_line(indent, LayoutLineKind.OPEN, marker, _label_prefix(field_key) + "[")]
     children = sorted(node.children, key=lambda child: child.new_index if marker == "+" else child.old_index)
     preview_limit = settings.compact_preview_items
-    preview_children = children
-    remaining = 0
-    if review_mode is ReviewMode.COMPACT and len(children) > preview_limit:
-        preview_children = children[:preview_limit]
-        remaining = len(children) - preview_limit
-
-    child_blocks = [
+    all_child_blocks = [
         _emit_added_removed_block(child, review_mode, settings, indent + 1, None, marker)
-        for child in preview_children
+        for child in children
     ]
+    child_blocks = all_child_blocks
+    remaining = 0
+    if (
+        review_mode is ReviewMode.COMPACT
+        and len(children) > preview_limit
+        and _count_block_lines(all_child_blocks) + 2 >= settings.compact_summary_min_lines
+    ):
+        child_blocks = all_child_blocks[:preview_limit]
+        remaining = len(children) - preview_limit
     if remaining:
         noun = "added" if marker == "+" else "removed"
         child_blocks.append([_summary_line(indent + 1, marker, f"… {remaining} more {noun} items")])
@@ -267,6 +273,29 @@ def _build_sequence_blocks(
             blocks.append([_summary_line(indent, "", f"… {count} unchanged {noun}")])
             continue
 
+        if review_mode is ReviewMode.COMPACT and child.status in (DiffStatus.ADDED, DiffStatus.REMOVED):
+            start = index
+            status = child.status
+            group: list[DiffNode] = []
+            while index < len(sequence) and sequence[index].status is status and sequence[index].move_detail is None:
+                group.append(sequence[index])
+                index += 1
+
+            preview_limit = settings.compact_preview_items if is_array else settings.compact_preview_keys
+            rendered_group = [
+                _build_child_block(group_child, review_mode, settings, indent, is_array)
+                for group_child in group
+            ]
+            if len(group) > preview_limit and _count_block_lines(rendered_group) >= settings.compact_summary_min_lines:
+                marker = "+" if status is DiffStatus.ADDED else "-"
+                noun = "added" if status is DiffStatus.ADDED else "removed"
+                target = "items" if is_array else "keys"
+                blocks.extend(rendered_group[:preview_limit])
+                blocks.append([_summary_line(indent, marker, f"… {len(group) - preview_limit} more {noun} {target}")])
+            else:
+                blocks.extend(rendered_group)
+            continue
+
         blocks.append(_build_child_block(child, review_mode, settings, indent, is_array))
         index += 1
     return blocks
@@ -315,6 +344,10 @@ def _flatten_blocks(blocks: Iterable[list[LayoutLine]]) -> list[LayoutLine]:
     for block in blocks:
         lines.extend(block)
     return lines
+
+
+def _count_block_lines(blocks: Iterable[list[LayoutLine]]) -> int:
+    return sum(len(block) for block in blocks)
 
 
 def _render_replace_block(marker: str, value: object, indent: int, field_key: str | None = None) -> list[LayoutLine]:
