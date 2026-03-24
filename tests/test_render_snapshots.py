@@ -23,6 +23,7 @@ EXPECTED_DIR = FIXTURES_DIR / "expected"
         (ReviewMode.FULL, "full-move-edit-old.json", "full-move-edit-new.json", "full_move_edit.txt"),
         (ReviewMode.COMPACT, "exact-value-move-old.json", "exact-value-move-new.json", "exact_value_move.txt"),
         (ReviewMode.COMPACT, "multiline-string-old.json", "multiline-string-new.json", "multiline_block.txt"),
+        (ReviewMode.COMPACT, "complex-anchor-old.json", "complex-anchor-new.json", "complex_anchor.txt"),
         (ReviewMode.COMPACT, "root-replace-old.json", "root-replace-new.json", "root_replace.txt"),
     ],
 )

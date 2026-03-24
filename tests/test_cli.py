@@ -72,6 +72,20 @@ def test_zero_diff_focus_and_full_print_nothing_in_non_tty(tmp_path) -> None:
         assert result.stderr == ""
 
 
+def test_zero_diff_focus_and_full_tty_notice(tmp_path, monkeypatch, capsys) -> None:
+    path = tmp_path / "same.json"
+    path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    for view in ("focus", "full"):
+        with pytest.raises(typer.Exit) as exit_info:
+            main(str(path), str(path), color="auto", view=view, quiet=False, match_key=None)
+        captured = capsys.readouterr()
+        assert exit_info.value.exit_code == 0
+        assert captured.out == ""
+        assert captured.err == "No semantic differences.\n"
+
+
 def test_invalid_view_returns_usage_error(tmp_path, capsys) -> None:
     path = tmp_path / "same.json"
     path.write_text("{}", encoding="utf-8")
@@ -106,6 +120,44 @@ def test_cli_renders_exact_value_move(tmp_path) -> None:
 
     assert result.returncode == 0
     assert "> moved $.items[0] -> $.items[1] (exact value)" in result.stdout
+
+
+def test_cli_custom_match_key_matches_modified_object(tmp_path) -> None:
+    old_path = tmp_path / "old.json"
+    new_path = tmp_path / "new.json"
+    old_path.write_text(json.dumps({"items": [{"sku": "svc-a", "v": 1}]}), encoding="utf-8")
+    new_path.write_text(json.dumps({"items": [{"sku": "svc-a", "v": 2}]}), encoding="utf-8")
+
+    result = _run_cli(tmp_path, "--match-key", "sku", str(old_path), str(new_path))
+
+    assert result.returncode == 0
+    assert '~ "v": 1 -> 2' in result.stdout
+    assert '> removed ' not in result.stdout
+
+
+def test_cli_numeric_type_difference_is_not_zero_diff(tmp_path) -> None:
+    old_path = tmp_path / "old.json"
+    new_path = tmp_path / "new.json"
+    old_path.write_text("1", encoding="utf-8")
+    new_path.write_text("1.0", encoding="utf-8")
+
+    result = _run_cli(tmp_path, str(old_path), str(new_path))
+
+    assert result.returncode == 0
+    assert "~ $: 1 -> 1.0" in result.stdout
+
+
+def test_cli_equivalent_float_lexemes_are_zero_diff(tmp_path) -> None:
+    old_path = tmp_path / "old.json"
+    new_path = tmp_path / "new.json"
+    old_path.write_text("1.0", encoding="utf-8")
+    new_path.write_text("1e0", encoding="utf-8")
+
+    result = _run_cli(tmp_path, str(old_path), str(new_path))
+
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert result.stderr == ""
 
 
 def test_color_always_emits_ansi_for_changed_lines(tmp_path) -> None:
