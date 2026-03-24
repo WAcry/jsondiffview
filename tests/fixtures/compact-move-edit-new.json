@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": "b",
+      "name": "beta",
+      "v": 2
+    },
+    {
+      "id": "c",
+      "name": "charlie",
+      "v": 3
+    },
+    {
+      "id": "a",
+      "name": "canrevate",
+      "active": true,
+      "kind": "service",
+      "owner": "team-a"
+    }
+  ],
+  "env": "prod",
+  "generated_by": "sync"
+}

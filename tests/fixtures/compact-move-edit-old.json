@@ -1,0 +1,23 @@
+{
+  "items": [
+    {
+      "id": "a",
+      "name": "candidate",
+      "legacy": true,
+      "kind": "service",
+      "owner": "team-a"
+    },
+    {
+      "id": "b",
+      "name": "beta",
+      "v": 2
+    },
+    {
+      "id": "c",
+      "name": "charlie",
+      "v": 3
+    }
+  ],
+  "env": "prod",
+  "generated_by": "sync"
+}

@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "y": 2
+    },
+    > moved $.items[0] -> $.items[1] (exact value)
+    {
+      "x": 1
+    }
+  ]
+}

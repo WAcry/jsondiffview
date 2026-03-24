@@ -1,0 +1,14 @@
+{
+  "items": [
+    … 2 unchanged items,
+    > moved $.items[0] -> $.items[2] (id="a")
+    {
+      "id": "a",
+      ~ "name": "can[-did-][+rev+]ate",
+      + "active": true,
+      - "legacy": true,
+      … 2 unchanged keys
+    }
+  ],
+  … 2 unchanged keys
+}
