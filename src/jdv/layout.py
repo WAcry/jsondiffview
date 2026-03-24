@@ -115,19 +115,23 @@ def _emit_added_removed_object(
     lines = [_line(indent, LayoutLineKind.OPEN, marker, _label_prefix(field_key) + "{")]
     children = sorted(node.children, key=lambda child: child.new_index if marker == "+" else child.old_index)
     preview_limit = settings.compact_preview_keys
-    all_child_blocks = [
-        _emit_added_removed_block(child, review_mode, settings, indent + 1, _field_key(child), marker)
-        for child in children
-    ]
-    child_blocks = all_child_blocks
+    child_blocks: list[list[LayoutLine]]
     remaining = 0
     if (
         review_mode is ReviewMode.COMPACT
         and len(children) > preview_limit
-        and _count_block_lines(all_child_blocks) + 2 >= settings.compact_summary_min_lines
+        and _estimate_pure_change_children_lines(children) + 2 >= settings.compact_summary_min_lines
     ):
-        child_blocks = all_child_blocks[:preview_limit]
+        child_blocks = [
+            _emit_added_removed_block(child, review_mode, settings, indent + 1, _field_key(child), marker)
+            for child in children[:preview_limit]
+        ]
         remaining = len(children) - preview_limit
+    else:
+        child_blocks = [
+            _emit_added_removed_block(child, review_mode, settings, indent + 1, _field_key(child), marker)
+            for child in children
+        ]
     if remaining:
         noun = "added" if marker == "+" else "removed"
         child_blocks.append([_summary_line(indent + 1, marker, f"… {remaining} more {noun} keys")])
@@ -148,19 +152,23 @@ def _emit_added_removed_array(
     lines = [_line(indent, LayoutLineKind.OPEN, marker, _label_prefix(field_key) + "[")]
     children = sorted(node.children, key=lambda child: child.new_index if marker == "+" else child.old_index)
     preview_limit = settings.compact_preview_items
-    all_child_blocks = [
-        _emit_added_removed_block(child, review_mode, settings, indent + 1, None, marker)
-        for child in children
-    ]
-    child_blocks = all_child_blocks
+    child_blocks: list[list[LayoutLine]]
     remaining = 0
     if (
         review_mode is ReviewMode.COMPACT
         and len(children) > preview_limit
-        and _count_block_lines(all_child_blocks) + 2 >= settings.compact_summary_min_lines
+        and _estimate_pure_change_children_lines(children) + 2 >= settings.compact_summary_min_lines
     ):
-        child_blocks = all_child_blocks[:preview_limit]
+        child_blocks = [
+            _emit_added_removed_block(child, review_mode, settings, indent + 1, None, marker)
+            for child in children[:preview_limit]
+        ]
         remaining = len(children) - preview_limit
+    else:
+        child_blocks = [
+            _emit_added_removed_block(child, review_mode, settings, indent + 1, None, marker)
+            for child in children
+        ]
     if remaining:
         noun = "added" if marker == "+" else "removed"
         child_blocks.append([_summary_line(indent + 1, marker, f"… {remaining} more {noun} items")])
@@ -282,18 +290,21 @@ def _build_sequence_blocks(
                 index += 1
 
             preview_limit = settings.compact_preview_items if is_array else settings.compact_preview_keys
-            rendered_group = [
-                _build_child_block(group_child, review_mode, settings, indent, is_array)
-                for group_child in group
-            ]
-            if len(group) > preview_limit and _count_block_lines(rendered_group) >= settings.compact_summary_min_lines:
+            estimated_lines = _estimate_pure_change_children_lines(group, include_removed_array_notes=is_array)
+            if len(group) > preview_limit and estimated_lines >= settings.compact_summary_min_lines:
                 marker = "+" if status is DiffStatus.ADDED else "-"
                 noun = "added" if status is DiffStatus.ADDED else "removed"
                 target = "items" if is_array else "keys"
-                blocks.extend(rendered_group[:preview_limit])
+                blocks.extend(
+                    _build_child_block(group_child, review_mode, settings, indent, is_array)
+                    for group_child in group[:preview_limit]
+                )
                 blocks.append([_summary_line(indent, marker, f"… {len(group) - preview_limit} more {noun} {target}")])
             else:
-                blocks.extend(rendered_group)
+                blocks.extend(
+                    _build_child_block(group_child, review_mode, settings, indent, is_array)
+                    for group_child in group
+                )
             continue
 
         blocks.append(_build_child_block(child, review_mode, settings, indent, is_array))
@@ -348,6 +359,27 @@ def _flatten_blocks(blocks: Iterable[list[LayoutLine]]) -> list[LayoutLine]:
 
 def _count_block_lines(blocks: Iterable[list[LayoutLine]]) -> int:
     return sum(len(block) for block in blocks)
+
+
+def _estimate_pure_change_children_lines(
+    children: Iterable[DiffNode],
+    include_removed_array_notes: bool = False,
+) -> int:
+    total = 0
+    for child in children:
+        if include_removed_array_notes and child.status is DiffStatus.REMOVED:
+            total += 1
+        total += _estimate_pure_change_block_lines(child)
+    return total
+
+
+def _estimate_pure_change_block_lines(node: DiffNode) -> int:
+    value = node.new_value if node.status is DiffStatus.ADDED else node.old_value
+    if _is_scalar(value):
+        return 1
+    if isinstance(value, dict) or isinstance(value, list):
+        return 2 + _estimate_pure_change_children_lines(node.children)
+    raise TypeError(f"Unsupported pure-change value: {type(value)!r}")
 
 
 def _render_replace_block(marker: str, value: object, indent: int, field_key: str | None = None) -> list[LayoutLine]:

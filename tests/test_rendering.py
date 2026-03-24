@@ -101,6 +101,28 @@ def test_compact_summary_threshold_controls_pure_added_block_summary() -> None:
     assert '+ "b": 2' in compact_full
 
 
+def test_compact_summary_threshold_controls_pure_added_array_summary() -> None:
+    old_value = {"items": []}
+    new_value = {"items": [1, 2, 3]}
+
+    compact_summary = _render(
+        old_value,
+        new_value,
+        ReviewMode.COMPACT,
+        DiffSettings(compact_preview_items=1, compact_summary_min_lines=3),
+    )
+    compact_full = _render(
+        old_value,
+        new_value,
+        ReviewMode.COMPACT,
+        DiffSettings(compact_preview_items=1, compact_summary_min_lines=100),
+    )
+
+    assert "… 2 more added items" in compact_summary
+    assert "… 2 more added items" not in compact_full
+    assert "+ 2" in compact_full
+
+
 def test_move_and_remove_provenance_are_consistent_across_views() -> None:
     old_value = {"items": [{"id": "a", "v": 1}, {"id": "b", "v": 2}, {"id": "c", "v": 3}]}
     new_value = {"items": [{"id": "b", "v": 2}, {"id": "a", "v": 4}]}

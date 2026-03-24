@@ -116,7 +116,9 @@ def test_double_stdin_returns_usage_error(tmp_path) -> None:
 
 def test_missing_file_returns_usage_error(tmp_path) -> None:
     missing = tmp_path / "missing.json"
-    result = _run_cli(tmp_path, str(missing), str(missing))
+    existing = tmp_path / "existing.json"
+    existing.write_text("{}", encoding="utf-8")
+    result = _run_cli(tmp_path, str(missing), str(existing))
 
     assert result.returncode == 2
     assert (
@@ -124,6 +126,17 @@ def test_missing_file_returns_usage_error(tmp_path) -> None:
         or "cannot find the file" in result.stderr.lower()
         or "no such file or directory" in result.stderr.lower()
     )
+    assert "old input (" in result.stderr
+
+
+def test_missing_new_file_reports_new_role(tmp_path) -> None:
+    existing = tmp_path / "existing.json"
+    missing = tmp_path / "missing.json"
+    existing.write_text("{}", encoding="utf-8")
+    result = _run_cli(tmp_path, str(existing), str(missing))
+
+    assert result.returncode == 2
+    assert "new input (" in result.stderr
 
 
 def _run_cli(tmp_path, *args: str) -> subprocess.CompletedProcess[str]:
