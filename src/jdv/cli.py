@@ -89,9 +89,9 @@ def _build_settings(match_key: list[str] | None) -> DiffSettings:
     return DiffSettings(match_keys=tuple(normalized))
 
 
-def _read_stdin_once(old_json: str, new_json: str) -> str | None:
+def _read_stdin_once(old_json: str, new_json: str) -> bytes | None:
     if old_json == "-" and new_json == "-":
         raise InputUsageError("Only one input may be read from stdin at a time")
     if old_json == "-" or new_json == "-":
-        return sys.stdin.read()
+        return sys.stdin.buffer.read()
     return None

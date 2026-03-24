@@ -136,6 +136,39 @@ def test_move_and_remove_provenance_are_consistent_across_views() -> None:
         assert '> removed $.items[2]' in text
 
 
+def test_nested_compact_estimate_uses_child_summary_behavior() -> None:
+    old_value = {"meta": {}}
+    new_value = {
+        "meta": {
+            "nested": {"a": 1, "b": 2, "c": 3, "d": 4},
+            "flag": True,
+        }
+    }
+
+    text = _render(
+        old_value,
+        new_value,
+        ReviewMode.COMPACT,
+        DiffSettings(compact_preview_keys=1, compact_summary_min_lines=6),
+    )
+
+    assert '+ "nested": {' in text
+    assert '… 3 more added keys' in text
+    assert '+ "flag": true' in text
+    assert '… 1 more added keys' not in text
+
+
+def test_multiline_string_uses_block_rendering() -> None:
+    old_value = {"description": "line1\nline2"}
+    new_value = {"description": "line1\nlineX"}
+
+    text = _render(old_value, new_value, ReviewMode.COMPACT)
+
+    assert '~ "description":' in text
+    assert '- "line1\\nline2"' in text
+    assert '+ "line1\\nlineX"' in text
+
+
 def _render(old_value, new_value, review_mode: ReviewMode, settings: DiffSettings | None = None) -> str:
     settings = settings or DiffSettings()
     root = diff_json(old_value, new_value, settings)

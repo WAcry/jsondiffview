@@ -18,13 +18,19 @@ class JsonParseError(JdvError):
     """Raised when JSON input cannot be read or parsed safely."""
 
 
-def read_json_source(path_or_dash: str, stdin_text: str | None, source_role: str) -> Any:
+def read_json_source(path_or_dash: str, stdin_data: str | bytes | None, source_role: str) -> Any:
     source_label = _source_label(path_or_dash, source_role)
 
     if path_or_dash == "-":
-        if stdin_text is None:
+        if stdin_data is None:
             raise InputUsageError(f"{source_label}: expected stdin input for '-'")
-        text = stdin_text
+        if isinstance(stdin_data, bytes):
+            try:
+                text = stdin_data.decode("utf-8")
+            except UnicodeError as exc:
+                raise JsonParseError(f"{source_label}: invalid UTF-8 input") from exc
+        else:
+            text = stdin_data
     else:
         try:
             text = Path(path_or_dash).read_text(encoding="utf-8")

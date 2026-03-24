@@ -47,14 +47,14 @@ def match_array_items(
 
         for old_index in sorted(unmatched_old):
             item = old_items[old_index]
-            if isinstance(item, dict) and key in item:
+            if isinstance(item, dict) and key in item and _is_identity_value(item[key]):
                 token = canonical_json(item[key])
                 old_groups[token].append(old_index)
                 old_labels[token] = IdentityLabel(key, render_json_scalar(item[key]))
 
         for new_index in sorted(unmatched_new):
             item = new_items[new_index]
-            if isinstance(item, dict) and key in item:
+            if isinstance(item, dict) and key in item and _is_identity_value(item[key]):
                 token = canonical_json(item[key])
                 new_groups[token].append(new_index)
 
@@ -311,3 +311,9 @@ def _is_better_sequence(candidate: list[int], current: list[int], pairs: list[_P
     candidate_old = [pairs[index].old_index for index in candidate]
     current_old = [pairs[index].old_index for index in current]
     return candidate_old < current_old
+
+
+def _is_identity_value(value: Any) -> bool:
+    if value is None:
+        return False
+    return isinstance(value, (str, bool, int, float))

@@ -90,3 +90,25 @@ def test_duplicate_exact_values_do_not_emit_arbitrary_move_provenance() -> None:
     exact_sequence = [match for match in matches if match.alignment_basis is AlignmentBasis.EXACT_SEQUENCE]
     assert exact_sequence
     assert all(match.move_basis is MoveBasis.NONE for match in exact_sequence if match.new_index != 1)
+
+
+def test_null_identity_key_does_not_match() -> None:
+    matches = match_array_items(
+        old_items=[{"id": None, "value": 1}],
+        new_items=[{"id": None, "value": 2}],
+        parent_path=("items",),
+        settings=DiffSettings(),
+    )
+
+    assert all(match.same_item_basis is SameItemBasis.NONE for match in matches)
+
+
+def test_non_scalar_identity_key_does_not_match() -> None:
+    matches = match_array_items(
+        old_items=[{"id": {"x": 1}, "value": 1}],
+        new_items=[{"id": {"x": 1}, "value": 2}],
+        parent_path=("items",),
+        settings=DiffSettings(),
+    )
+
+    assert all(match.same_item_basis is SameItemBasis.NONE for match in matches)

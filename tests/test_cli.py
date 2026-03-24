@@ -178,6 +178,26 @@ def test_invalid_utf8_returns_usage_error(tmp_path) -> None:
     assert "invalid UTF-8 input" in result.stderr
 
 
+def test_invalid_utf8_stdin_returns_usage_error(tmp_path) -> None:
+    valid = tmp_path / "valid.json"
+    valid.write_text("{}", encoding="utf-8")
+
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(SRC_PATH) + os.pathsep + env.get("PYTHONPATH", "")
+    result = subprocess.run(
+        [sys.executable, "-m", "jdv", "-", str(valid)],
+        cwd=tmp_path,
+        input=b"\xff\xfe\x00",
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 2
+    assert b"old input (" in result.stderr
+    assert b"invalid UTF-8 input" in result.stderr
+
+
 def _run_cli(tmp_path, *args: str) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["PYTHONPATH"] = str(SRC_PATH) + os.pathsep + env.get("PYTHONPATH", "")

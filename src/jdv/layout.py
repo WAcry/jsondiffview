@@ -120,7 +120,7 @@ def _emit_added_removed_object(
     if (
         review_mode is ReviewMode.COMPACT
         and len(children) > preview_limit
-        and _estimate_pure_change_children_lines(children) + 2 >= settings.compact_summary_min_lines
+        and _estimate_compact_pure_change_container_full_lines(children, settings, is_array=False) >= settings.compact_summary_min_lines
     ):
         child_blocks = [
             _emit_added_removed_block(child, review_mode, settings, indent + 1, _field_key(child), marker)
@@ -157,7 +157,7 @@ def _emit_added_removed_array(
     if (
         review_mode is ReviewMode.COMPACT
         and len(children) > preview_limit
-        and _estimate_pure_change_children_lines(children) + 2 >= settings.compact_summary_min_lines
+        and _estimate_compact_pure_change_container_full_lines(children, settings, is_array=True) >= settings.compact_summary_min_lines
     ):
         child_blocks = [
             _emit_added_removed_block(child, review_mode, settings, indent + 1, None, marker)
@@ -187,6 +187,11 @@ def _emit_modified_leaf(
     label_prefix = _label_prefix(field_key, root=root)
     if node.string_detail is not None and node.string_detail.mode == "inline":
         return [_value_line(indent, "~", f"{label_prefix}{_render_inline_string_detail(node.string_detail)}")]
+    if node.string_detail is not None and node.string_detail.mode == "block":
+        lines = [_line(indent, LayoutLineKind.MODIFIED_HEADER, "~", label_prefix.rstrip())]
+        lines.extend(_render_replace_block("-", node.old_value, indent + 1))
+        lines.extend(_render_replace_block("+", node.new_value, indent + 1))
+        return lines
 
     if _is_scalar(node.old_value) and _is_scalar(node.new_value):
         return [
@@ -290,7 +295,7 @@ def _build_sequence_blocks(
                 index += 1
 
             preview_limit = settings.compact_preview_items if is_array else settings.compact_preview_keys
-            estimated_lines = _estimate_pure_change_children_lines(group, include_removed_array_notes=is_array)
+            estimated_lines = _estimate_compact_pure_change_group_lines(group, settings, is_array)
             if len(group) > preview_limit and estimated_lines >= settings.compact_summary_min_lines:
                 marker = "+" if status is DiffStatus.ADDED else "-"
                 noun = "added" if status is DiffStatus.ADDED else "removed"
@@ -361,24 +366,59 @@ def _count_block_lines(blocks: Iterable[list[LayoutLine]]) -> int:
     return sum(len(block) for block in blocks)
 
 
-def _estimate_pure_change_children_lines(
+def _estimate_compact_pure_change_container_lines(
     children: Iterable[DiffNode],
-    include_removed_array_notes: bool = False,
+    settings: DiffSettings,
+    is_array: bool,
 ) -> int:
-    total = 0
-    for child in children:
-        if include_removed_array_notes and child.status is DiffStatus.REMOVED:
-            total += 1
-        total += _estimate_pure_change_block_lines(child)
-    return total
+    child_lines = [
+        _estimate_compact_pure_change_node_lines(child, settings)
+        for child in children
+    ]
+    preview_limit = settings.compact_preview_items if is_array else settings.compact_preview_keys
+    total_lines = sum(child_lines) + 2
+    if len(child_lines) > preview_limit and total_lines >= settings.compact_summary_min_lines:
+        return sum(child_lines[:preview_limit]) + 1 + 2
+    return total_lines
 
 
-def _estimate_pure_change_block_lines(node: DiffNode) -> int:
+def _estimate_compact_pure_change_container_full_lines(
+    children: Iterable[DiffNode],
+    settings: DiffSettings,
+    is_array: bool,
+) -> int:
+    _ = is_array
+    return sum(_estimate_compact_pure_change_node_lines(child, settings) for child in children) + 2
+
+
+def _estimate_compact_pure_change_group_lines(
+    children: Iterable[DiffNode],
+    settings: DiffSettings,
+    is_array: bool,
+) -> int:
+    return sum(
+        _estimate_compact_child_block_lines(child, settings, is_array)
+        for child in children
+    )
+
+
+def _estimate_compact_child_block_lines(
+    node: DiffNode,
+    settings: DiffSettings,
+    is_array: bool,
+) -> int:
+    note_lines = 1 if is_array and node.status is DiffStatus.REMOVED else 0
+    return note_lines + _estimate_compact_pure_change_node_lines(node, settings)
+
+
+def _estimate_compact_pure_change_node_lines(node: DiffNode, settings: DiffSettings) -> int:
     value = node.new_value if node.status is DiffStatus.ADDED else node.old_value
     if _is_scalar(value):
         return 1
-    if isinstance(value, dict) or isinstance(value, list):
-        return 2 + _estimate_pure_change_children_lines(node.children)
+    if isinstance(value, dict):
+        return _estimate_compact_pure_change_container_lines(node.children, settings, is_array=False)
+    if isinstance(value, list):
+        return _estimate_compact_pure_change_container_lines(node.children, settings, is_array=True)
     raise TypeError(f"Unsupported pure-change value: {type(value)!r}")
 
 
