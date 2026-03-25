@@ -110,6 +110,18 @@ def test_invalid_color_returns_usage_error(tmp_path, capsys) -> None:
     assert "Invalid --color value" in captured.err
 
 
+def test_match_key_tab_and_space_only_returns_usage_error(tmp_path) -> None:
+    old_path = tmp_path / "old.json"
+    new_path = tmp_path / "new.json"
+    old_path.write_text("{}", encoding="utf-8")
+    new_path.write_text("{}", encoding="utf-8")
+
+    result = _run_cli(tmp_path, "--match-key", "\t  \t", str(old_path), str(new_path))
+
+    assert result.returncode == 2
+    assert "--match-key must not be empty" in result.stderr
+
+
 def test_cli_renders_exact_value_move(tmp_path) -> None:
     old_path = tmp_path / "old.json"
     new_path = tmp_path / "new.json"

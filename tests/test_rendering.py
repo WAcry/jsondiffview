@@ -136,6 +136,64 @@ def test_move_and_remove_provenance_are_consistent_across_views() -> None:
         assert '> removed $.items[2]' in text
 
 
+def test_focus_and_full_diverge_on_deep_unchanged_context() -> None:
+    old_value = {
+        "items": [
+            {
+                "id": "a",
+                "meta": {
+                    "name": "alpha",
+                    "region": "us-west-2",
+                    "tier": "gold",
+                },
+                "v": 1,
+            },
+            {
+                "id": "b",
+                "meta": {
+                    "name": "beta",
+                    "region": "us-east-1",
+                    "tier": "silver",
+                },
+                "v": 2,
+            },
+        ]
+    }
+    new_value = {
+        "items": [
+            {
+                "id": "b",
+                "meta": {
+                    "name": "beta",
+                    "region": "us-east-1",
+                    "tier": "silver",
+                },
+                "v": 2,
+            },
+            {
+                "id": "a",
+                "meta": {
+                    "name": "alpha",
+                    "region": "us-west-2",
+                    "tier": "gold",
+                },
+                "v": 1,
+            },
+        ]
+    }
+
+    focus_text = _render(old_value, new_value, ReviewMode.FOCUS)
+    full_text = _render(old_value, new_value, ReviewMode.FULL)
+
+    assert '> moved $.items[0] -> $.items[1] (id="a")' in focus_text
+    assert '> moved $.items[0] -> $.items[1] (id="a")' in full_text
+    assert "… 3 unchanged keys" in focus_text
+    assert '"region": "us-west-2"' not in focus_text
+    assert '"meta": {' in full_text
+    assert '"region": "us-west-2"' in full_text
+    assert '"tier": "gold"' in full_text
+
+
 def test_nested_compact_estimate_uses_child_summary_behavior() -> None:
     old_value = {"meta": {}}
     new_value = {
