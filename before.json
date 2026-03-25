@@ -1,0 +1,60 @@
+{
+  "env": "prod",
+  "generated_by": "sync",
+  "services": [
+    {
+      "sku": "svc-a",
+      "variant_id": "blue",
+      "name": "alpha-api",
+      "region": "us-west-2",
+      "replicas": 3,
+      "tags": [
+        "critical",
+        "edge"
+      ],
+      "metadata": {
+        "owner": "team-platform",
+        "tier": "gold",
+        "notes": "Primary region rollout\nLegacy probes enabled"
+      }
+    },
+    {
+      "sku": "svc-b",
+      "variant_id": "green",
+      "name": "billing-worker",
+      "region": "us-east-1",
+      "replicas": 2,
+      "tags": [
+        "batch"
+      ],
+      "metadata": {
+        "owner": "team-finance",
+        "tier": "silver",
+        "notes": "Nightly settlement window"
+      }
+    },
+    {
+      "sku": "svc-c",
+      "variant_id": "canary",
+      "name": "catalog-indexer",
+      "region": "eu-west-1",
+      "replicas": 1,
+      "tags": [
+        "search"
+      ],
+      "metadata": {
+        "owner": "team-search",
+        "tier": "bronze",
+        "notes": "Canary shard"
+      }
+    }
+  ],
+  "feature_flags": {
+    "search_v2": false,
+    "audit_mode": true
+  },
+  "limits": {
+    "requests_per_minute": 1200,
+    "burst": 200
+  }
+}
