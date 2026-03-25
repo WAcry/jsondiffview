@@ -12,13 +12,61 @@ from .render import render_review_view
 
 
 def main(
-    old_json: str = typer.Argument(...),
-    new_json: str = typer.Argument(...),
-    match_key: list[str] | None = typer.Option(None, "--match-key"),
-    color: str = typer.Option("auto", "--color"),
-    view: str = typer.Option("compact", "--view"),
-    quiet: bool = typer.Option(False, "--quiet"),
+    old_json: str = typer.Argument(
+        ...,
+        metavar="OLD_JSON",
+        help="Path to the old JSON document. Use '-' to read this side from stdin.",
+    ),
+    new_json: str = typer.Argument(
+        ...,
+        metavar="NEW_JSON",
+        help="Path to the new JSON document. Use '-' to read this side from stdin.",
+    ),
+    match_key: list[str] | None = typer.Option(
+        None,
+        "--match-key",
+        "-k",
+        metavar="FIELD",
+        help=(
+            "Array object identity key. Repeat to replace the default keys: "
+            "id, key, name, title."
+        ),
+    ),
+    color: ColorMode = typer.Option(
+        ColorMode.AUTO,
+        "--color",
+        "-c",
+        case_sensitive=False,
+        help="Color mode for rendered diff output.",
+    ),
+    view: ReviewMode = typer.Option(
+        ReviewMode.COMPACT,
+        "--view",
+        "-v",
+        case_sensitive=False,
+        help="compact shows a compressed diff, focus shows the full changed content, full shows the full JSON context.",
+    ),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        "-q",
+        help="Suppress the TTY-only 'No semantic differences.' notice for zero-diff results.",
+    ),
 ) -> None:
+    """Compare two JSON documents and render a review-oriented diff.
+
+    Examples:
+
+      jdv before.json after.json
+      jdv --view focus --match-key sku --match-key variant_id before.json after.json
+      cat after.json | jdv --view full --color never before.json -
+
+    Notes:
+
+      - Only one side may use '-' to read from stdin.
+      - Zero-diff results exit 0 and print nothing to stdout.
+      - Default array identity keys: id, key, name, title.
+    """
     try:
         color_mode = _parse_color_mode(color)
         review_mode = _parse_review_mode(view)
@@ -57,7 +105,9 @@ def entrypoint() -> None:
     typer.run(main)
 
 
-def _parse_color_mode(value: str) -> ColorMode:
+def _parse_color_mode(value: ColorMode | str) -> ColorMode:
+    if isinstance(value, ColorMode):
+        return value
     try:
         return ColorMode(value)
     except ValueError as exc:
@@ -66,7 +116,9 @@ def _parse_color_mode(value: str) -> ColorMode:
         ) from exc
 
 
-def _parse_review_mode(value: str) -> ReviewMode:
+def _parse_review_mode(value: ReviewMode | str) -> ReviewMode:
+    if isinstance(value, ReviewMode):
+        return value
     try:
         return ReviewMode(value)
     except ValueError as exc:
