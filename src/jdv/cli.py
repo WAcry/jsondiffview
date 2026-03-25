@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 
 import typer
+from typer.models import OptionInfo
 
 from .diff import diff_json
 from .io import InputUsageError, JdvError, read_json_source
@@ -68,6 +69,11 @@ def main(
       - Default array identity keys: id, key, name, title.
     """
     try:
+        match_key = _normalize_option_default(match_key, None)
+        color = _normalize_option_default(color, ColorMode.AUTO)
+        view = _normalize_option_default(view, ReviewMode.COMPACT)
+        quiet = _normalize_option_default(quiet, False)
+
         color_mode = _parse_color_mode(color)
         review_mode = _parse_review_mode(view)
         settings = _build_settings(match_key)
@@ -147,3 +153,9 @@ def _read_stdin_once(old_json: str, new_json: str) -> bytes | None:
     if old_json == "-" or new_json == "-":
         return sys.stdin.buffer.read()
     return None
+
+
+def _normalize_option_default(value, default):
+    if isinstance(value, OptionInfo):
+        return default
+    return value
