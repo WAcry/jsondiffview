@@ -1,4 +1,4 @@
-# jdv
+# jsondiffview
 
 A review-oriented JSON diff for your terminal.
 
