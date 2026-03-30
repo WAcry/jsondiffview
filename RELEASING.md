@@ -64,8 +64,10 @@ Expected output includes:
 
    ```bash
    git remote add origin https://github.com/WAcry/jsondiffview
-   git push --force-with-lease origin main
+   git push --force-with-lease origin HEAD:main
    ```
+
+   If `origin` already exists, update it with `git remote set-url origin https://github.com/WAcry/jsondiffview` before pushing. If you prefer to merge or fast-forward your local `main` first, confirm that `main` already points at the reviewed takeover commit before pushing it.
 
 3. Re-check the external prerequisites listed above in GitHub, TestPyPI, and PyPI.
 4. Re-run the local validation commands.

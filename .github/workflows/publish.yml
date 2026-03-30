@@ -40,22 +40,54 @@ jobs:
           . .venv-smoke/bin/activate
           python -m pip install dist/jsondiffview-*.whl
 
-          cat > left.json <<'JSON'
-          {"value":1}
-          JSON
-          cat > right.json <<'JSON'
-          {"value":2}
-          JSON
+          python - <<'PY'
+          import subprocess
+          import sys
+          from importlib.metadata import version
+          from pathlib import Path
 
-          jdv --help > cli-help.txt
-          jdv --version > version.txt
-          python -m jdv --help > module-help.txt
-          jdv left.json right.json --color never > diff.txt
+          Path("left.json").write_text('{"value":1}', encoding="utf-8")
+          Path("right.json").write_text('{"value":2}', encoding="utf-8")
+          package_version = version("jsondiffview")
 
-          grep -F -- "--view" cli-help.txt
-          grep -F -- "--view" module-help.txt
-          grep -E '^jdv [0-9]+\.[0-9]+\.[0-9]+$' version.txt
-          grep -F '~ "value": 1 -> 2' diff.txt
+          cli_help = subprocess.run(
+              ["jdv", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          cli_version = subprocess.run(
+              ["jdv", "--version"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          module_help = subprocess.run(
+              [sys.executable, "-m", "jdv", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          diff_result = subprocess.run(
+              ["jdv", "left.json", "right.json", "--color", "never"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+
+          assert cli_help.returncode == 0, cli_help
+          assert cli_version.returncode == 0, cli_version
+          assert module_help.returncode == 0, module_help
+          assert diff_result.returncode == 0, diff_result
+          assert "--view" in cli_help.stdout, cli_help.stdout
+          assert "--view" in module_help.stdout, module_help.stdout
+          assert cli_version.stdout == f"jdv {package_version}\n", cli_version.stdout
+          assert '~ "value": 1 -> 2' in diff_result.stdout, diff_result.stdout
+          PY
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
@@ -111,9 +143,45 @@ jobs:
         shell: bash
         run: |
           . .venv-testpypi/bin/activate
-          jdv --help
-          jdv --version
-          python -m jdv --help
+          python - <<'PY'
+          import os
+          import subprocess
+          import sys
+          from importlib.metadata import version
+
+          package_version = version("jsondiffview")
+          expected_version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+
+          cli_help = subprocess.run(
+              ["jdv", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          cli_version = subprocess.run(
+              ["jdv", "--version"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          module_help = subprocess.run(
+              [sys.executable, "-m", "jdv", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+
+          assert package_version == expected_version, (package_version, expected_version)
+          assert cli_help.returncode == 0, cli_help
+          assert cli_version.returncode == 0, cli_version
+          assert module_help.returncode == 0, module_help
+          assert "--view" in cli_help.stdout, cli_help.stdout
+          assert "--view" in module_help.stdout, module_help.stdout
+          assert cli_version.stdout == f"jdv {package_version}\n", cli_version.stdout
+          PY
 
   publish-pypi:
     name: Publish to PyPI

@@ -36,19 +36,51 @@ jobs:
       - name: Smoke test module and CLI entrypoints
         shell: bash
         run: |
-          cat > left.json <<'JSON'
-          {"value":1}
-          JSON
-          cat > right.json <<'JSON'
-          {"value":2}
-          JSON
+          uv run python - <<'PY'
+          import subprocess
+          import sys
+          from importlib.metadata import version
+          from pathlib import Path
 
-          uv run python -m jdv --help > module-help.txt
-          uv run jdv --help > cli-help.txt
-          uv run jdv --version > version.txt
-          uv run jdv left.json right.json --color never > diff.txt
+          Path("left.json").write_text('{"value":1}', encoding="utf-8")
+          Path("right.json").write_text('{"value":2}', encoding="utf-8")
+          package_version = version("jsondiffview")
 
-          grep -F -- "--view" module-help.txt
-          grep -F -- "--view" cli-help.txt
-          grep -E '^jdv [0-9]+\.[0-9]+\.[0-9]+$' version.txt
-          grep -F '~ "value": 1 -> 2' diff.txt
+          module_help = subprocess.run(
+              [sys.executable, "-m", "jdv", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          cli_help = subprocess.run(
+              ["jdv", "--help"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          cli_version = subprocess.run(
+              ["jdv", "--version"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+          diff_result = subprocess.run(
+              ["jdv", "left.json", "right.json", "--color", "never"],
+              capture_output=True,
+              text=True,
+              encoding="utf-8",
+              check=False,
+          )
+
+          assert module_help.returncode == 0, module_help
+          assert cli_help.returncode == 0, cli_help
+          assert cli_version.returncode == 0, cli_version
+          assert diff_result.returncode == 0, diff_result
+          assert "--view" in module_help.stdout, module_help.stdout
+          assert "--view" in cli_help.stdout, cli_help.stdout
+          assert cli_version.stdout == f"jdv {package_version}\n", cli_version.stdout
+          assert '~ "value": 1 -> 2' in diff_result.stdout, diff_result.stdout
+          PY

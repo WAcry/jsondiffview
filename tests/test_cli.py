@@ -4,11 +4,13 @@ import json
 import os
 import subprocess
 import sys
+from importlib.metadata import version as package_version
 from pathlib import Path
 
 import pytest
 import typer
 
+from jdv import __version__
 from jdv.cli import main
 
 
@@ -29,8 +31,12 @@ def test_version_runs(tmp_path) -> None:
     result = _run_cli(tmp_path, "--version")
 
     assert result.returncode == 0
-    assert result.stdout == "jdv 2.1.0\n"
+    assert result.stdout == f"jdv {__version__}\n"
     assert result.stderr == ""
+
+
+def test_package_metadata_version_matches_cli_version() -> None:
+    assert package_version("jsondiffview") == __version__
 
 
 def test_zero_diff_prints_nothing_in_non_tty(tmp_path, capsys) -> None:
