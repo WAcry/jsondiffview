@@ -251,6 +251,31 @@ def test_multiline_string_block_keeps_trailing_comma_on_last_line() -> None:
     assert '~ "tail": 1 -> 2' in text
 
 
+def test_multiline_compact_budget_limits_single_hunk_context_on_both_sides() -> None:
+    old_value = {"notes": "a\nb\nold\nc\nd"}
+    new_value = {"notes": "a\nb\nnew\nc\nd"}
+
+    text = _render(old_value, new_value, ReviewMode.COMPACT)
+
+    assert '  "b"' in text
+    assert '  "c"' in text
+    assert '  "a"' not in text
+    assert '  "d"' not in text
+    assert "… 1 unchanged lines omitted …" in text
+
+
+def test_multiline_compact_budget_keeps_context_on_both_sides_of_two_hunks() -> None:
+    old_value = {"notes": "old1\nkeep1\nkeep2\nkeep3\nold2"}
+    new_value = {"notes": "new1\nkeep1\nkeep2\nkeep3\nnew2"}
+
+    text = _render(old_value, new_value, ReviewMode.COMPACT)
+
+    assert '  "keep1"' in text
+    assert '  "keep3"' in text
+    assert '  "keep2"' not in text
+    assert "… 1 unchanged lines omitted …" in text
+
+
 def _render(old_value, new_value, review_mode: ReviewMode, settings: DiffSettings | None = None) -> str:
     settings = settings or DiffSettings()
     root = diff_json(old_value, new_value, settings)

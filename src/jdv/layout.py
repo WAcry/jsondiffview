@@ -524,11 +524,33 @@ def _emit_string_detail(
             )
         ]
         context_budget = _multiline_context_budget(review_mode, settings)
-        for hunk_index, hunk in enumerate(detail.multiline_hunks):
-            lines.extend(_render_multiline_gap(hunk.prefix_context, indent + 1, context_budget, from_end=True))
+        hunks = detail.multiline_hunks
+        if hunks:
+            leading_allow_short = len(hunks) == 1 and not hunks[0].suffix_context
+            lines.extend(
+                _render_multiline_edge_gap(
+                    hunks[0].prefix_context,
+                    indent + 1,
+                    context_budget,
+                    from_end=True,
+                    allow_short_expansion=leading_allow_short,
+                )
+            )
+        for hunk_index, hunk in enumerate(hunks):
             lines.extend(_render_multiline_body(hunk.body, indent + 1))
-            if hunk_index == len(detail.multiline_hunks) - 1:
-                lines.extend(_render_multiline_gap(hunk.suffix_context, indent + 1, context_budget, from_end=False))
+            if hunk_index + 1 < len(hunks):
+                lines.extend(_render_multiline_inter_hunk_gap(hunk.suffix_context, indent + 1, context_budget))
+            else:
+                trailing_allow_short = len(hunks) == 1 and not hunk.prefix_context
+                lines.extend(
+                    _render_multiline_edge_gap(
+                        hunk.suffix_context,
+                        indent + 1,
+                        context_budget,
+                        from_end=False,
+                        allow_short_expansion=trailing_allow_short,
+                    )
+                )
         return lines
 
     assert detail.summary is not None
@@ -616,16 +638,20 @@ def _multiline_context_budget(review_mode: ReviewMode, settings: DiffSettings) -
     return None
 
 
-def _render_multiline_gap(
+def _render_multiline_edge_gap(
     lines: list[StringLine],
     indent: int,
     context_budget: int | None,
     *,
     from_end: bool,
+    allow_short_expansion: bool,
 ) -> list[LayoutLine]:
     if not lines:
         return []
-    if context_budget is None or len(lines) <= max(context_budget, context_budget * 2):
+    if context_budget is None or len(lines) <= context_budget:
+        selected = lines
+        omitted = 0
+    elif allow_short_expansion and len(lines) <= context_budget * 2:
         selected = lines
         omitted = 0
     elif from_end:
@@ -639,6 +665,24 @@ def _render_multiline_gap(
     if omitted:
         rendered.append(_summary_line(indent, "", f"… {omitted} unchanged lines omitted …"))
     rendered.extend(_render_multiline_body(selected, indent))
+    return rendered
+
+
+def _render_multiline_inter_hunk_gap(
+    lines: list[StringLine],
+    indent: int,
+    context_budget: int | None,
+) -> list[LayoutLine]:
+    if not lines:
+        return []
+    if context_budget is None or len(lines) <= context_budget * 2:
+        return _render_multiline_body(lines, indent)
+
+    rendered = _render_multiline_body(lines[:context_budget], indent)
+    omitted = len(lines) - (context_budget * 2)
+    if omitted:
+        rendered.append(_summary_line(indent, "", f"… {omitted} unchanged lines omitted …"))
+    rendered.extend(_render_multiline_body(lines[-context_budget:], indent))
     return rendered
 
 
