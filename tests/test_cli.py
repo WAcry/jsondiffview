@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from importlib.metadata import version as package_version
@@ -20,11 +21,12 @@ SRC_PATH = REPO_ROOT / "src"
 
 def test_help_runs(tmp_path) -> None:
     result = _run_cli(tmp_path, "--help")
+    help_text = _strip_ansi(result.stdout)
 
     assert result.returncode == 0
-    assert "--view" in result.stdout
-    assert "--color" in result.stdout
-    assert "--version" in result.stdout
+    assert "--view" in help_text
+    assert "--color" in help_text
+    assert "--version" in help_text
 
 
 def test_version_runs(tmp_path) -> None:
@@ -303,3 +305,7 @@ def _run_cli(tmp_path, *args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         env=env,
     )
+
+
+def _strip_ansi(text: str) -> str:
+    return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)

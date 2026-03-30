@@ -37,10 +37,14 @@ jobs:
         shell: bash
         run: |
           uv run python - <<'PY'
+          import re
           import subprocess
           import sys
           from importlib.metadata import version
           from pathlib import Path
+
+          def strip_ansi(text: str) -> str:
+              return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
 
           Path("left.json").write_text('{"value":1}', encoding="utf-8")
           Path("right.json").write_text('{"value":2}', encoding="utf-8")
@@ -79,8 +83,8 @@ jobs:
           assert cli_help.returncode == 0, cli_help
           assert cli_version.returncode == 0, cli_version
           assert diff_result.returncode == 0, diff_result
-          assert "--view" in module_help.stdout, module_help.stdout
-          assert "--view" in cli_help.stdout, cli_help.stdout
+          assert "--view" in strip_ansi(module_help.stdout), module_help.stdout
+          assert "--view" in strip_ansi(cli_help.stdout), cli_help.stdout
           assert cli_version.stdout == f"jdv {package_version}\n", cli_version.stdout
           assert '~ "value": 1 -> 2' in diff_result.stdout, diff_result.stdout
           PY
