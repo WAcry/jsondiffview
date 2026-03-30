@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Iterable
+from wcwidth import wcswidth
 
 from .model import (
     DiffNode,
@@ -9,10 +10,16 @@ from .model import (
     LayoutLine,
     LayoutLineKind,
     LayoutPlan,
+    LayoutSpan,
     MoveBasis,
     ReviewMode,
+    StringDetail,
+    StringLine,
+    StringMode,
+    StringSpan,
 )
 from .paths import format_display_path, json_string_fragment, render_json_scalar
+from .string_diff import split_graphemes
 
 
 def build_display_layout(
@@ -51,7 +58,7 @@ def _emit_node(
     if node.status is DiffStatus.UNCHANGED:
         return [_value_line(indent, "", _render_labelled_scalar(field_key, new_value, root=root))]
 
-    return _emit_modified_leaf(node, indent, field_key, root=root)
+    return _emit_modified_leaf(node, review_mode, settings, indent, field_key, root=root)
 
 
 def _emit_object(
@@ -180,18 +187,16 @@ def _emit_added_removed_array(
 
 def _emit_modified_leaf(
     node: DiffNode,
+    review_mode: ReviewMode,
+    settings: DiffSettings,
     indent: int,
     field_key: str | None,
     root: bool,
 ) -> list[LayoutLine]:
+    if node.string_detail is not None:
+        return _emit_string_detail(node.string_detail, indent, field_key, root, review_mode, settings)
+
     label_prefix = _label_prefix(field_key, root=root)
-    if node.string_detail is not None and node.string_detail.mode == "inline":
-        return [_value_line(indent, "~", f"{label_prefix}{_render_inline_string_detail(node.string_detail)}")]
-    if node.string_detail is not None and node.string_detail.mode == "block":
-        lines = [_line(indent, LayoutLineKind.MODIFIED_HEADER, "~", label_prefix.rstrip())]
-        lines.extend(_render_replace_block("-", node.old_value, indent + 1))
-        lines.extend(_render_replace_block("+", node.new_value, indent + 1))
-        return lines
 
     if _is_scalar(node.old_value) and _is_scalar(node.new_value):
         return [
@@ -351,7 +356,7 @@ def _apply_trailing_commas(blocks: list[list[LayoutLine]]) -> None:
             marker=last_line.marker,
             text=last_line.text,
             trailing_comma=True,
-            string_detail=last_line.string_detail,
+            spans=last_line.spans,
         )
 
 
@@ -461,19 +466,6 @@ def _move_note_text(node: DiffNode) -> str:
     )
 
 
-def _render_inline_string_detail(detail) -> str:
-    parts: list[str] = []
-    for chunk in detail.chunks:
-        escaped = json_string_fragment(chunk.text)
-        if chunk.role == "same":
-            parts.append(escaped)
-        elif chunk.role == "removed":
-            parts.append(f"[-{escaped}-]")
-        else:
-            parts.append(f"[+{escaped}+]")
-    return f"\"{''.join(parts)}\""
-
-
 def _render_labelled_scalar(field_key: str | None, value: object, root: bool = False) -> str:
     return f"{_label_prefix(field_key, root=root)}{render_json_scalar(value)}"
 
@@ -501,8 +493,362 @@ def _is_scalar(value: object) -> bool:
     return value is None or isinstance(value, (bool, int, float, str))
 
 
-def _line(indent: int, kind: LayoutLineKind, marker: str, text: str) -> LayoutLine:
-    return LayoutLine(indent=indent, kind=kind, marker=marker, text=text)
+def _emit_string_detail(
+    detail: StringDetail,
+    indent: int,
+    field_key: str | None,
+    root: bool,
+    review_mode: ReviewMode,
+    settings: DiffSettings,
+) -> list[LayoutLine]:
+    label_prefix = _label_prefix(field_key, root=root)
+    label_span = LayoutSpan(role="modified_label", text=label_prefix)
+
+    if detail.mode is StringMode.INLINE_TOKEN:
+        return [
+            _span_line(
+                indent,
+                LayoutLineKind.VALUE,
+                "~",
+                [label_span, *_quote_string_spans(detail.inline_spans)],
+            )
+        ]
+
+    if detail.mode is StringMode.MULTILINE_BLOCK:
+        lines = [
+            _span_line(
+                indent,
+                LayoutLineKind.MODIFIED_HEADER,
+                "~",
+                [label_span, LayoutSpan(role="plain", text=_multiline_header_text(detail))],
+            )
+        ]
+        context_budget = _multiline_context_budget(review_mode, settings)
+        for hunk_index, hunk in enumerate(detail.multiline_hunks):
+            lines.extend(_render_multiline_gap(hunk.prefix_context, indent + 1, context_budget, from_end=True))
+            lines.extend(_render_multiline_body(hunk.body, indent + 1))
+            if hunk_index == len(detail.multiline_hunks) - 1:
+                lines.extend(_render_multiline_gap(hunk.suffix_context, indent + 1, context_budget, from_end=False))
+        return lines
+
+    assert detail.summary is not None
+    lines = [
+        _span_line(
+            indent,
+            LayoutLineKind.MODIFIED_HEADER,
+            "~",
+            [
+                label_span,
+                LayoutSpan(
+                    role="plain",
+                    text=(
+                        f"string changed ({detail.summary.old_len} -> "
+                        f"{detail.summary.new_len} chars, {detail.summary.hunk_count} hunks)"
+                    ),
+                ),
+            ],
+        )
+    ]
+    excerpt_columns = _blob_excerpt_columns(review_mode, settings)
+    hunk_limit = _blob_hunk_limit(review_mode, settings)
+    display_hunks = detail.blob_hunks if hunk_limit is None else detail.blob_hunks[:hunk_limit]
+    for index, hunk in enumerate(display_hunks):
+        if hunk.omitted_before_chars > 0:
+            label = "prefix" if index == 0 else "text"
+            lines.append(
+                _summary_line(
+                    indent + 1,
+                    "",
+                    f"… {hunk.omitted_before_chars} chars of unchanged {label} omitted …",
+                )
+            )
+        lines.append(
+            _span_line(
+                indent + 1,
+                LayoutLineKind.VALUE,
+                "-",
+                _quote_string_spans(_trim_blob_spans(hunk.old_spans, excerpt_columns)),
+            )
+        )
+        lines.append(
+            _span_line(
+                indent + 1,
+                LayoutLineKind.VALUE,
+                "+",
+                _quote_string_spans(_trim_blob_spans(hunk.new_spans, excerpt_columns)),
+            )
+        )
+
+    if hunk_limit is not None and len(detail.blob_hunks) > len(display_hunks):
+        lines.append(
+            _summary_line(
+                indent + 1,
+                "",
+                f"… {len(detail.blob_hunks) - len(display_hunks)} more hunks omitted …",
+            )
+        )
+    elif display_hunks and display_hunks[-1].omitted_after_chars > 0:
+        lines.append(
+            _summary_line(
+                indent + 1,
+                "",
+                f"… {display_hunks[-1].omitted_after_chars} chars of unchanged suffix omitted …",
+            )
+        )
+    return lines
+
+
+def _multiline_header_text(detail: StringDetail) -> str:
+    if detail.old_line_count == detail.new_line_count:
+        header = f"<<{detail.old_line_count} lines"
+    else:
+        header = f"<<{detail.old_line_count} -> {detail.new_line_count} lines"
+    if detail.trailing_newline_changed:
+        header += ", trailing newline changed"
+    return header + ">>"
+
+
+def _multiline_context_budget(review_mode: ReviewMode, settings: DiffSettings) -> int | None:
+    if review_mode is ReviewMode.COMPACT:
+        return settings.string_multiline_context_compact
+    if review_mode is ReviewMode.FOCUS:
+        return settings.string_multiline_context_focus
+    return None
+
+
+def _render_multiline_gap(
+    lines: list[StringLine],
+    indent: int,
+    context_budget: int | None,
+    *,
+    from_end: bool,
+) -> list[LayoutLine]:
+    if not lines:
+        return []
+    if context_budget is None or len(lines) <= max(context_budget, context_budget * 2):
+        selected = lines
+        omitted = 0
+    elif from_end:
+        selected = lines[-context_budget:]
+        omitted = len(lines) - context_budget
+    else:
+        selected = lines[:context_budget]
+        omitted = len(lines) - context_budget
+
+    rendered: list[LayoutLine] = []
+    if omitted:
+        rendered.append(_summary_line(indent, "", f"… {omitted} unchanged lines omitted …"))
+    rendered.extend(_render_multiline_body(selected, indent))
+    return rendered
+
+
+def _render_multiline_body(lines: list[StringLine], indent: int) -> list[LayoutLine]:
+    rendered: list[LayoutLine] = []
+    for line in lines:
+        if line.kind == "summary":
+            rendered.append(_summary_line(indent, "", line.text))
+            continue
+        marker = ""
+        if line.kind == "removed":
+            marker = "-"
+        elif line.kind == "added":
+            marker = "+"
+        rendered.append(_span_line(indent, LayoutLineKind.VALUE, marker, _quote_string_spans(line.spans)))
+    return rendered
+
+
+def _blob_excerpt_columns(review_mode: ReviewMode, settings: DiffSettings) -> int | None:
+    if review_mode is ReviewMode.COMPACT:
+        return settings.string_blob_excerpt_columns_compact
+    if review_mode is ReviewMode.FOCUS:
+        return settings.string_blob_excerpt_columns_focus
+    return settings.string_blob_excerpt_columns_full
+
+
+def _blob_hunk_limit(review_mode: ReviewMode, settings: DiffSettings) -> int | None:
+    if review_mode is ReviewMode.COMPACT:
+        return settings.string_blob_hunk_limit_compact
+    if review_mode is ReviewMode.FOCUS:
+        return settings.string_blob_hunk_limit_focus
+    return settings.string_blob_hunk_limit_full
+
+
+def _trim_blob_spans(spans: list[StringSpan], budget: int | None) -> list[StringSpan]:
+    if budget is None:
+        return spans
+    if _string_span_width(spans) <= budget:
+        return spans
+
+    changed_indexes = [index for index, span in enumerate(spans) if span.role != "plain"]
+    if not changed_indexes:
+        text = "".join(span.text for span in spans)
+        return [StringSpan(role="plain", text=_take_left_columns(text, budget))]
+
+    first_changed = changed_indexes[0]
+    last_changed = changed_indexes[-1]
+    middle = spans[first_changed:last_changed + 1]
+    middle_width = _string_span_width(middle)
+    if middle_width >= budget:
+        return _merge_string_spans(_take_center_excerpt(middle, budget))
+
+    remaining = max(budget - middle_width, 0)
+    left_budget = remaining // 2
+    right_budget = remaining - left_budget
+
+    trimmed: list[StringSpan] = []
+    left_text = _take_right_columns(
+        "".join(span.text for span in spans[:first_changed] if span.role == "plain"),
+        left_budget,
+    )
+    if left_text:
+        trimmed.append(StringSpan(role="plain", text=left_text))
+    trimmed.extend(middle)
+    right_text = _take_left_columns(
+        "".join(span.text for span in spans[last_changed + 1:] if span.role == "plain"),
+        right_budget,
+    )
+    if right_text:
+        trimmed.append(StringSpan(role="plain", text=right_text))
+    return _merge_string_spans(trimmed)
+
+
+def _quote_string_spans(spans: list[StringSpan]) -> list[LayoutSpan]:
+    rendered = [LayoutSpan(role="plain", text="\"")]
+    for span in spans:
+        escaped = json_string_fragment(span.text)
+        if span.role == "plain":
+            rendered.append(LayoutSpan(role="plain", text=escaped))
+        elif span.role == "removed":
+            rendered.append(LayoutSpan(role="removed", text=f"[-{escaped}-]"))
+        else:
+            rendered.append(LayoutSpan(role="added", text=f"[+{escaped}+]"))
+    rendered.append(LayoutSpan(role="plain", text="\""))
+    return rendered
+
+
+def _string_span_width(spans: list[StringSpan]) -> int:
+    return sum(_display_width(span.text) for span in spans)
+
+
+def _merge_string_spans(spans: list[StringSpan]) -> list[StringSpan]:
+    merged: list[StringSpan] = []
+    for span in spans:
+        if not span.text:
+            continue
+        if merged and merged[-1].role == span.role:
+            previous = merged[-1]
+            merged[-1] = StringSpan(role=span.role, text=previous.text + span.text)
+            continue
+        merged.append(span)
+    return merged
+
+
+def _display_width(text: str) -> int:
+    width = wcswidth(text)
+    return width if width >= 0 else len(split_graphemes(text))
+
+
+def _take_left_columns(text: str, max_columns: int | None) -> str:
+    if max_columns is None:
+        return text
+    if max_columns <= 0 or not text:
+        return ""
+
+    graphemes = split_graphemes(text)
+    result = ""
+    used = 0
+    for grapheme in graphemes:
+        char_width = _display_width(grapheme)
+        if result and used + char_width > max_columns:
+            break
+        result += grapheme
+        used += char_width
+        if used >= max_columns:
+            break
+    return result
+
+
+def _take_right_columns(text: str, max_columns: int | None) -> str:
+    if max_columns is None:
+        return text
+    if max_columns <= 0 or not text:
+        return ""
+
+    graphemes = split_graphemes(text)
+    reversed_result = ""
+    used = 0
+    for grapheme in reversed(graphemes):
+        char_width = _display_width(grapheme)
+        if reversed_result and used + char_width > max_columns:
+            break
+        reversed_result += grapheme
+        used += char_width
+        if used >= max_columns:
+            break
+    return "".join(reversed(reversed_result))
+
+
+def _take_center_excerpt(spans: list[StringSpan], budget: int) -> list[StringSpan]:
+    if budget <= 0:
+        return []
+    if _string_span_width(spans) <= budget:
+        return spans
+    if budget == 1:
+        return [StringSpan(role="plain", text="…")]
+
+    inner_budget = budget - 1
+    left_budget = inner_budget // 2
+    right_budget = inner_budget - left_budget
+    return [
+        *_take_span_prefix(spans, left_budget),
+        StringSpan(role="plain", text="…"),
+        *_take_span_suffix(spans, right_budget),
+    ]
+
+
+def _take_span_prefix(spans: list[StringSpan], budget: int) -> list[StringSpan]:
+    if budget <= 0:
+        return []
+    remaining = budget
+    excerpt: list[StringSpan] = []
+    for span in spans:
+        if remaining <= 0:
+            break
+        text = _take_left_columns(span.text, remaining)
+        if text:
+            excerpt.append(StringSpan(role=span.role, text=text))
+            remaining -= _display_width(text)
+    return excerpt
+
+
+def _take_span_suffix(spans: list[StringSpan], budget: int) -> list[StringSpan]:
+    if budget <= 0:
+        return []
+    remaining = budget
+    excerpt: list[StringSpan] = []
+    for span in reversed(spans):
+        if remaining <= 0:
+            break
+        text = _take_right_columns(span.text, remaining)
+        if text:
+            excerpt.append(StringSpan(role=span.role, text=text))
+            remaining -= _display_width(text)
+    excerpt.reverse()
+    return excerpt
+
+
+def _line(
+    indent: int,
+    kind: LayoutLineKind,
+    marker: str,
+    text: str,
+    spans: list[LayoutSpan] | None = None,
+) -> LayoutLine:
+    return LayoutLine(indent=indent, kind=kind, marker=marker, text=text, spans=spans or [])
+
+
+def _span_line(indent: int, kind: LayoutLineKind, marker: str, spans: list[LayoutSpan]) -> LayoutLine:
+    return _line(indent, kind, marker, "", spans=spans)
 
 
 def _value_line(indent: int, marker: str, text: str) -> LayoutLine:

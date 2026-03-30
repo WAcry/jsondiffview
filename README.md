@@ -7,6 +7,7 @@ Current behavior:
 - strict JSON input loading with duplicate-key rejection
 - non-finite number rejection, including overflowed literals such as `1e999`
 - three review modes: `compact`, `focus`, and `full`
+- token-first string diffs with multiline block rendering and blob-safe summaries
 - identity-aware array matching via `id`, `key`, `name`, `title`, plus exact-value relocation
 - move and remove provenance in review output
 - silent zero-diff behavior on `stdout`, with the optional TTY notice on `stderr`
@@ -20,6 +21,16 @@ Current behavior:
 Default compact review:
 
     uv run python -m jdv before.json after.json
+
+Typical modified-string output in compact mode:
+
+    {
+      ~ "tier": "[-silver-][+gold+] tier",
+      ~ "notes": <<2 lines>>
+        "Primary region rollout"
+        - "[-Legacy-] probes enabled"
+        + "[+Canary+] probes enabled"
+    }
 
 Focus review with explicit match keys:
 

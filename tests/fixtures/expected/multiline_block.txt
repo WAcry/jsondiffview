@@ -1,5 +1,6 @@
 {
-  ~ "description":
-    - "line1\nline2"
-    + "line1\nlineX"
+  ~ "description": <<2 lines>>
+    "line1"
+    - "line[-2-]"
+    + "line[+X+]"
 }

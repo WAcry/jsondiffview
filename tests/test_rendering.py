@@ -222,9 +222,33 @@ def test_multiline_string_uses_block_rendering() -> None:
 
     text = _render(old_value, new_value, ReviewMode.COMPACT)
 
-    assert '~ "description":' in text
-    assert '- "line1\\nline2"' in text
-    assert '+ "line1\\nlineX"' in text
+    assert '~ "description": <<2 lines>>' in text
+    assert '  "line1"' in text
+    assert '- "line[-2-]"' in text
+    assert '+ "line[+X+]"' in text
+
+
+def test_multiline_header_reports_trailing_newline_and_keeps_short_context() -> None:
+    old_value = {"notes": "a\nb\n"}
+    new_value = {"notes": "a\nb\nc"}
+
+    text = _render(old_value, new_value, ReviewMode.COMPACT)
+
+    assert '~ "notes": <<2 -> 3 lines, trailing newline changed>>' in text
+    assert '  "a"' in text
+    assert '  "b"' in text
+    assert '+ "c"' in text
+
+
+def test_multiline_string_block_keeps_trailing_comma_on_last_line() -> None:
+    old_value = {"notes": "line1\nline2", "tail": 1}
+    new_value = {"notes": "line1\nlineX", "tail": 2}
+
+    text = _render(old_value, new_value, ReviewMode.COMPACT)
+
+    assert '~ "notes": <<2 lines>>' in text
+    assert '+ "line[+X+]",' in text
+    assert '~ "tail": 1 -> 2' in text
 
 
 def _render(old_value, new_value, review_mode: ReviewMode, settings: DiffSettings | None = None) -> str:

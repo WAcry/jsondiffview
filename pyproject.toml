@@ -9,7 +9,10 @@ description = "A JSON diff CLI focused on review-oriented output."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "patiencediff>=0.2.18",
+  "regex>=2026.3.32",
   "typer>=0.12,<1.0",
+  "wcwidth>=0.6.0",
 ]
 
 [project.scripts]

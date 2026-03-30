@@ -1,0 +1,7 @@
+{
+  ~ "notes": <<2 lines>>
+    "line1"
+    - "line[-2-]"
+    + "line[+X+]",
+  ~ "tail": 1 -> 2
+}

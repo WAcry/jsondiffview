@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from difflib import SequenceMatcher
 from typing import Any
 
 from .match import match_array_items
@@ -10,10 +9,9 @@ from .model import (
     DiffStatus,
     MoveBasis,
     MoveDetail,
-    StringChunk,
-    StringDetail,
 )
 from .paths import canonical_json
+from .string_diff import build_string_detail
 
 
 def diff_json(old_value: Any, new_value: Any, settings: DiffSettings) -> DiffNode:
@@ -44,7 +42,7 @@ def _diff_value(
 
     string_detail = None
     if isinstance(old_value, str) and isinstance(new_value, str):
-        string_detail = _build_string_detail(old_value, new_value, settings.inline_string_limit)
+        string_detail = build_string_detail(old_value, new_value, settings)
 
     return DiffNode(
         old_path=old_path,
@@ -226,25 +224,3 @@ def _build_removed_node(value: Any, path: tuple[str | int, ...]) -> DiffNode:
 
 def _children_have_changes(children: list[DiffNode]) -> bool:
     return any(child.status is not DiffStatus.UNCHANGED or child.move_detail is not None for child in children)
-
-
-def _build_string_detail(old_text: str, new_text: str, inline_limit: int) -> StringDetail:
-    if "\n" in old_text or "\n" in new_text or max(len(old_text), len(new_text)) > inline_limit:
-        return StringDetail(mode="block", old_text=old_text, new_text=new_text)
-
-    chunks: list[StringChunk] = []
-    matcher = SequenceMatcher(a=old_text, b=new_text)
-    for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
-        if tag == "equal" and old_start != old_end:
-            chunks.append(StringChunk(role="same", text=old_text[old_start:old_end]))
-        elif tag == "delete":
-            chunks.append(StringChunk(role="removed", text=old_text[old_start:old_end]))
-        elif tag == "insert":
-            chunks.append(StringChunk(role="added", text=new_text[new_start:new_end]))
-        elif tag == "replace":
-            if old_start != old_end:
-                chunks.append(StringChunk(role="removed", text=old_text[old_start:old_end]))
-            if new_start != new_end:
-                chunks.append(StringChunk(role="added", text=new_text[new_start:new_end]))
-
-    return StringDetail(mode="inline", old_text=old_text, new_text=new_text, chunks=chunks)
