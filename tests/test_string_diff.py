@@ -71,6 +71,13 @@ def test_blob_classifier_promotes_opaque_long_token_without_punctuation_density(
     assert classify_string_mode(old_text, new_text, DiffSettings()) is StringMode.BLOB_SUMMARY
 
 
+def test_blob_classifier_promotes_asymmetric_opaque_long_token() -> None:
+    old_text = "A" * 220
+    new_text = ("word " * 45).rstrip()
+
+    assert classify_string_mode(old_text, new_text, DiffSettings()) is StringMode.BLOB_SUMMARY
+
+
 def test_grapheme_clusters_are_not_split_by_microdiff() -> None:
     detail = build_string_detail("🙂é", "🙂x", DiffSettings())
 
@@ -98,6 +105,16 @@ def test_tokenize_string_uses_expected_token_classes() -> None:
         (StringTokenKind.PUNCT, "_"),
         (StringTokenKind.NUMBER, "01"),
     ]
+
+
+def test_multiline_pairing_does_not_recurse_on_large_replace_window() -> None:
+    old_text = "\n".join(f"old-{index}" for index in range(600))
+    new_text = "\n".join(f"new-{index}" for index in range(600))
+
+    detail = build_string_detail(old_text, new_text, DiffSettings())
+
+    assert detail.mode is StringMode.MULTILINE_BLOCK
+    assert detail.multiline_hunks
 
 
 def _span_signature(spans) -> list[tuple[str, str]]:

@@ -26,6 +26,7 @@ EXPECTED_DIR = FIXTURES_DIR / "expected"
         (ReviewMode.COMPACT, "string-inline-word-old.json", "string-inline-word-new.json", "string_inline_word_replace.txt"),
         (ReviewMode.COMPACT, "string-inline-micro-old.json", "string-inline-micro-new.json", "string_inline_microdiff.txt"),
         (ReviewMode.COMPACT, "string-blob-old.json", "string-blob-new.json", "string_blob_compact.txt"),
+        (ReviewMode.FOCUS, "string-blob-old.json", "string-blob-new.json", "string_blob_focus.txt"),
         (ReviewMode.FULL, "string-blob-old.json", "string-blob-new.json", "string_blob_full.txt"),
         (ReviewMode.COMPACT, "root-string-multiline-old.json", "root-string-multiline-new.json", "root_string_multiline.txt"),
         (

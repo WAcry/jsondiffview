@@ -52,21 +52,7 @@ def classify_string_mode(old_text: str, new_text: str, settings: DiffSettings) -
     if "\n" in old_text or "\n" in new_text:
         return StringMode.MULTILINE_BLOCK
 
-    candidate = old_text if len(old_text) >= len(new_text) else new_text
-    max_len = len(candidate)
-    if max_len >= settings.string_blob_min_chars:
-        return StringMode.BLOB_SUMMARY
-
-    whitespace_count = sum(1 for ch in candidate if ch.isspace())
-    separator_count = sum(1 for ch in candidate if ch in _BLOB_SEPARATORS)
-    if (
-        max_len >= settings.string_blob_dense_line_chars
-        and whitespace_count <= max_len // 20
-        and separator_count >= 3
-    ):
-        return StringMode.BLOB_SUMMARY
-
-    if _longest_non_whitespace_run(candidate) >= settings.string_blob_opaque_token_chars:
+    if _is_blob_candidate(old_text, settings) or _is_blob_candidate(new_text, settings):
         return StringMode.BLOB_SUMMARY
 
     return StringMode.INLINE_TOKEN
@@ -464,6 +450,13 @@ def _pair_replace_window_lines(
     new_lines: list[str],
     settings: DiffSettings,
 ) -> tuple[tuple[int, int], ...]:
+    if len(old_lines) * len(new_lines) > 50_000:
+        return tuple(
+            (index, index)
+            for index in range(min(len(old_lines), len(new_lines)))
+            if _line_similarity(old_lines[index], new_lines[index]) >= settings.string_multiline_pair_min_ratio
+        )
+
     ratios = [
         [
             _line_similarity(old_line, new_line)
@@ -805,6 +798,23 @@ def _shared_affix_len(old_graphemes: list[str], new_graphemes: list[str]) -> int
         suffix += 1
 
     return prefix + suffix
+
+
+def _is_blob_candidate(text: str, settings: DiffSettings) -> bool:
+    text_len = len(text)
+    if text_len >= settings.string_blob_min_chars:
+        return True
+
+    whitespace_count = sum(1 for ch in text if ch.isspace())
+    separator_count = sum(1 for ch in text if ch in _BLOB_SEPARATORS)
+    if (
+        text_len >= settings.string_blob_dense_line_chars
+        and whitespace_count <= text_len // 20
+        and separator_count >= 3
+    ):
+        return True
+
+    return _longest_non_whitespace_run(text) >= settings.string_blob_opaque_token_chars
 
 
 def _longest_non_whitespace_run(text: str) -> int:
