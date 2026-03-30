@@ -22,30 +22,7 @@ Then compare two files:
 jdv before.json after.json
 ```
 
-Sample output (default `compact` view):
-
-```
-{
-  "release": {
-    ~ "manifest_version": "2026.03.30-[-rc1-][+rc2+]",
-    ~ "review_label": "[-silver-][+gold+] tier"
-  },
-  "services": [
-    … 1 unchanged item,
-    + {
-    +   "id": "svc-d",
-    +   "sku": "svc-d",
-    +   … 6 more added keys
-    + },
-    > moved $.services[0] -> $.services[2] (id="svc-a")
-    {
-      ~ "replicas": 3 -> 4,
-      …
-    }
-  ],
-  …
-}
-```
+![jdv compact view](image.png)
 
 `+` marks additions. `-` marks removals. `~` marks modifications. `>` marks provenance notes (moves and removals). Unchanged siblings are collapsed into `…` summaries. Within modified strings, `[-old-]` and `[+new+]` highlight exactly what changed — with or without terminal colors.
 
