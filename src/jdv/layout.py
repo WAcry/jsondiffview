@@ -730,27 +730,33 @@ def _trim_blob_spans(spans: list[StringSpan], budget: int | None) -> list[String
 
     first_changed = changed_indexes[0]
     last_changed = changed_indexes[-1]
+    leading_plain = "".join(span.text for span in spans[:first_changed] if span.role == "plain")
+    trailing_plain = "".join(span.text for span in spans[last_changed + 1:] if span.role == "plain")
     middle = spans[first_changed:last_changed + 1]
     middle_width = _string_span_width(middle)
     if middle_width >= budget:
-        return _merge_string_spans(_take_center_excerpt(middle, budget))
+        edge_budget = max((budget - 1) // 4, 0)
+        left_budget = min(edge_budget, budget)
+        right_budget = min(edge_budget, max(budget - left_budget, 0))
+        middle_budget = max(budget - left_budget - right_budget, 1)
+        excerpt: list[StringSpan] = []
+        if leading_plain and left_budget > 0:
+            excerpt.append(StringSpan(role="plain", text=_take_right_columns(leading_plain, left_budget)))
+        excerpt.extend(_take_center_excerpt(middle, middle_budget))
+        if trailing_plain and right_budget > 0:
+            excerpt.append(StringSpan(role="plain", text=_take_left_columns(trailing_plain, right_budget)))
+        return _merge_string_spans(excerpt)
 
     remaining = max(budget - middle_width, 0)
     left_budget = remaining // 2
     right_budget = remaining - left_budget
 
     trimmed: list[StringSpan] = []
-    left_text = _take_right_columns(
-        "".join(span.text for span in spans[:first_changed] if span.role == "plain"),
-        left_budget,
-    )
+    left_text = _take_right_columns(leading_plain, left_budget)
     if left_text:
         trimmed.append(StringSpan(role="plain", text=left_text))
     trimmed.extend(middle)
-    right_text = _take_left_columns(
-        "".join(span.text for span in spans[last_changed + 1:] if span.role == "plain"),
-        right_budget,
-    )
+    right_text = _take_left_columns(trailing_plain, right_budget)
     if right_text:
         trimmed.append(StringSpan(role="plain", text=right_text))
     return _merge_string_spans(trimmed)

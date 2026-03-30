@@ -276,6 +276,20 @@ def test_multiline_compact_budget_keeps_context_on_both_sides_of_two_hunks() -> 
     assert "… 1 unchanged lines omitted …" in text
 
 
+def test_blob_summary_keeps_nearby_shared_context_around_changed_hunks() -> None:
+    old_value = {"payload": ("A" * 2053) + "token=abc123" + ("B" * 2048)}
+    new_value = {"payload": ("A" * 2053) + "token=def456" + ("B" * 2064)}
+
+    compact = _render(old_value, new_value, ReviewMode.COMPACT)
+    focus = _render(old_value, new_value, ReviewMode.FOCUS)
+    full = _render(old_value, new_value, ReviewMode.FULL)
+
+    for text in (compact, focus, full):
+        assert 'token=' in text
+        assert 'def456' in text
+        assert '+ "[+def456+]' not in text
+
+
 def _render(old_value, new_value, review_mode: ReviewMode, settings: DiffSettings | None = None) -> str:
     settings = settings or DiffSettings()
     root = diff_json(old_value, new_value, settings)

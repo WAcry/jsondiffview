@@ -2,5 +2,5 @@
   ~ "payload": string changed (4108 -> 4124 chars, 1 hunks)
     … 1934 chars of unchanged prefix omitted …
     - "AAAAAAAAAAAAAAAAAAAAAAAtoken=[-abc123-]BBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
-    + "[+def456+]BBBBBBBBBBBBBBBBBBBBBBBBB…BBBBBBBBBBBBBBBB[+BBBBBBBBBBBBBBBB+]"
+    + "AAAAAAAAAtoken=[+def456+]BBBBBBBBBB…B[+BBBBBBBBBBBBBBBB+]"
 }
