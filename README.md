@@ -24,7 +24,7 @@ Then compare two files:
 jdv before.json after.json
 ```
 
-![jdv compact view](image.png)
+![jdv compact view](https://raw.githubusercontent.com/WAcry/jsondiffview/v2.1.1/image.png)
 
 `+` marks additions. `-` marks removals. `~` marks modifications. `>` marks provenance notes (moves and removals). Unchanged siblings are collapsed into `…` summaries. Within modified strings, `[-old-]` and `[+new+]` highlight exactly what changed — with or without terminal colors.
 

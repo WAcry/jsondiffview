@@ -5,8 +5,8 @@ import os
 import re
 import subprocess
 import sys
-from importlib.metadata import version as package_version
 from pathlib import Path
+import tomllib
 
 import pytest
 import typer
@@ -37,8 +37,10 @@ def test_version_runs(tmp_path) -> None:
     assert result.stderr == ""
 
 
-def test_package_metadata_version_matches_cli_version() -> None:
-    assert package_version("jsondiffview") == __version__
+def test_project_uses_single_version_source() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["project"]["dynamic"] == ["version"]
+    assert pyproject["tool"]["hatch"]["version"]["path"] == "src/jdv/__init__.py"
 
 
 def test_zero_diff_prints_nothing_in_non_tty(tmp_path, capsys) -> None:
