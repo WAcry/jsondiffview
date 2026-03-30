@@ -80,9 +80,10 @@ Expected output includes:
    - build and validate the distributions
    - publish to TestPyPI automatically
    - smoke test `jsondiffview==2.1.0` from TestPyPI
-7. Verify the TestPyPI installation by checking `jdv --help` and `jdv --version` in a fresh environment.
-8. Approve the `pypi` environment only after TestPyPI validation succeeds.
-9. Wait for the PyPI publish and GitHub Release jobs to finish.
+7. Verify the TestPyPI project page, including README rendering and package metadata.
+8. Verify the TestPyPI installation by checking `jdv --help` and `jdv --version` in a fresh environment.
+9. Approve the `pypi` environment only after both TestPyPI validations succeed.
+10. Wait for the PyPI publish and GitHub Release jobs to finish.
 
 ## About `1.0.0`
 
