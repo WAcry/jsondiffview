@@ -1,10 +1,15 @@
 {
   "env": "prod",
   "generated_by": "sync",
+  "release": {
+    "channel": "candidate",
+    "manifest_version": "2026.03.30-rc1",
+    "review_label": "silver tier"
+  },
   "services": [
     {
+      "id": "svc-a",
       "sku": "svc-a",
-      "variant_id": "blue",
       "name": "alpha-api",
       "region": "us-west-2",
       "replicas": 3,
@@ -14,13 +19,21 @@
       ],
       "metadata": {
         "owner": "team-platform",
-        "tier": "gold",
-        "notes": "Primary region rollout\nLegacy probes enabled"
+        "tier_label": "silver tier",
+        "release_track": "candidate",
+        "notes": "Primary region rollout\nLegacy probes enabled",
+        "session_fingerprint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtoken=abc123BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+        "routing_hints": "region=us-west-2&tier=gold&rollout=stable&probes=legacy&owner=team-platform&fallback=shadow&cache=edge&alerts=burn-rate&notes=primary-rollout"
+      },
+      "endpoints": {
+        "health": "https://alpha.example.com/health",
+        "metrics": "https://alpha.example.com/metrics",
+        "docs": "https://alpha.example.com/docs"
       }
     },
     {
+      "id": "svc-b",
       "sku": "svc-b",
-      "variant_id": "green",
       "name": "billing-worker",
       "region": "us-east-1",
       "replicas": 2,
@@ -29,13 +42,19 @@
       ],
       "metadata": {
         "owner": "team-finance",
-        "tier": "silver",
+        "tier_label": "silver tier",
+        "release_track": "stable",
         "notes": "Nightly settlement window"
+      },
+      "runtime": {
+        "image": "billing-worker:2026.03.29",
+        "python": "3.11",
+        "autoscale": false
       }
     },
     {
+      "id": "svc-c",
       "sku": "svc-c",
-      "variant_id": "canary",
       "name": "catalog-indexer",
       "region": "eu-west-1",
       "replicas": 1,
@@ -44,17 +63,41 @@
       ],
       "metadata": {
         "owner": "team-search",
-        "tier": "bronze",
+        "tier_label": "bronze tier",
+        "release_track": "canary",
         "notes": "Canary shard"
       }
     }
   ],
+  "quality_gates": [
+    {
+      "gate": "schema-lint",
+      "level": "blocking"
+    },
+    {
+      "gate": "snapshot-verify",
+      "level": "blocking"
+    },
+    {
+      "gate": "docs-audit",
+      "level": "advisory"
+    }
+  ],
   "feature_flags": {
     "search_v2": false,
-    "audit_mode": true
+    "audit_mode": true,
+    "shadow_compare": false
   },
   "limits": {
     "requests_per_minute": 1200,
-    "burst": 200
+    "burst": 200,
+    "queue_depth": 5000
+  },
+  "dashboards": {
+    "primary": "ops-overview",
+    "links": [
+      "https://grafana.example.com/d/jdv-overview",
+      "https://grafana.example.com/d/jdv-errors"
+    ]
   }
 }

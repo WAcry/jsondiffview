@@ -1,10 +1,15 @@
 {
   "env": "prod",
   "generated_by": "sync",
+  "release": {
+    "channel": "candidate",
+    "manifest_version": "2026.03.30-rc2",
+    "review_label": "gold tier"
+  },
   "services": [
     {
+      "id": "svc-b",
       "sku": "svc-b",
-      "variant_id": "green",
       "name": "billing-worker",
       "region": "us-east-1",
       "replicas": 2,
@@ -13,13 +18,19 @@
       ],
       "metadata": {
         "owner": "team-finance",
-        "tier": "silver",
+        "tier_label": "silver tier",
+        "release_track": "stable",
         "notes": "Nightly settlement window"
+      },
+      "runtime": {
+        "image": "billing-worker:2026.03.29",
+        "python": "3.11",
+        "autoscale": false
       }
     },
     {
+      "id": "svc-d",
       "sku": "svc-d",
-      "variant_id": "preview",
       "name": "recommendation-api",
       "region": "us-central-1",
       "replicas": 2,
@@ -29,33 +40,72 @@
       ],
       "metadata": {
         "owner": "team-growth",
-        "tier": "silver",
+        "tier_label": "silver tier",
+        "release_track": "preview",
         "notes": "Preview rollout"
       }
     },
     {
+      "id": "svc-a",
       "sku": "svc-a",
-      "variant_id": "blue",
       "name": "alpha-api",
       "region": "us-west-2",
       "replicas": 4,
       "tags": [
         "critical",
-        "edge"
+        "edge",
+        "latency-slo"
       ],
       "metadata": {
         "owner": "team-platform",
-        "tier": "gold",
-        "notes": "Primary region rollout\nCanary probes enabled"
+        "tier_label": "gold tier",
+        "release_track": "canrevate",
+        "notes": "Primary region rollout\nCanary probes enabled",
+        "session_fingerprint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtoken=def456BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+        "routing_hints": "region=us-west-2&tier=platinum&rollout=stable&probes=canary&owner=team-platform&fallback=disabled&cache=edge-hot&alerts=latency-slo&notes=primary-rollout"
+      },
+      "endpoints": {
+        "health": "https://alpha.example.com/health",
+        "metrics": "https://alpha.example.com/metrics",
+        "docs": "https://alpha.example.com/v2/docs",
+        "openapi": "https://alpha.example.com/openapi.json"
       }
+    }
+  ],
+  "quality_gates": [
+    {
+      "gate": "docs-audit",
+      "level": "advisory"
+    },
+    {
+      "gate": "schema-lint",
+      "level": "blocking"
+    },
+    {
+      "gate": "snapshot-verify",
+      "level": "blocking"
+    },
+    {
+      "gate": "latency-budget",
+      "level": "blocking"
     }
   ],
   "feature_flags": {
     "search_v2": true,
+    "shadow_compare": true,
     "edge_cache": true
   },
   "limits": {
     "requests_per_minute": 1200,
-    "burst": 250
+    "burst": 250,
+    "queue_depth": 6500
+  },
+  "dashboards": {
+    "primary": "ops-overview",
+    "links": [
+      "https://grafana.example.com/d/jdv-overview",
+      "https://grafana.example.com/d/jdv-errors",
+      "https://grafana.example.com/d/jdv-latency"
+    ]
   }
 }
