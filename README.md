@@ -7,13 +7,13 @@ A review-oriented JSON diff for your terminal.
 ## Quick start
 
 ```
-pip install jdv
+pip install jsondiffview
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```
-uv tool install jdv
+uv tool install jsondiffview
 ```
 
 Then compare two files:
