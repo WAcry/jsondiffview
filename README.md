@@ -4,6 +4,8 @@ A review-oriented JSON diff for your terminal.
 
 `jdv` compares two JSON documents and renders a human-readable diff that follows the structure of JSON itself. Instead of a flat patch list, the output looks like annotated JSON — you see what changed, where it moved, and what stayed the same, all in context.
 
+The package published on PyPI is named `jsondiffview`, but the installed CLI command remains `jdv`.
+
 ## Quick start
 
 ```
@@ -108,6 +110,7 @@ Usage: jdv [OPTIONS] OLD_JSON NEW_JSON
 | `--match-key FIELD` | `-k` | `id key name title` | Identity key for array objects. Repeat to set multiple. Replaces defaults when given. |
 | `--color` | `-c` | `auto` | Color mode: `auto`, `always`, or `never`. |
 | `--quiet` | `-q` | off | Suppress the "No semantic differences." notice on stderr. |
+| `--version` |  | off | Show the installed `jdv` version and exit. |
 
 Either argument may be `-` to read from stdin (but not both).
 
@@ -138,5 +141,7 @@ Colors only enhance — all diff semantics are readable in plain text through `~
 ```
 uv sync
 uv run python -m jdv --help
+uv run jdv --version
 uv run pytest -q
+uv build --no-sources
 ```

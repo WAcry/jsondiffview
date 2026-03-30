@@ -5,11 +5,18 @@ import sys
 import typer
 from typer.models import OptionInfo
 
+from . import __version__
 from .diff import diff_json
 from .io import InputUsageError, JdvError, read_json_source
 from .layout import build_display_layout
 from .model import ColorMode, DiffSettings, ReviewMode
 from .render import render_review_view
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"jdv {__version__}")
+        raise typer.Exit()
 
 
 def main(
@@ -52,6 +59,13 @@ def main(
         "--quiet",
         "-q",
         help="Suppress the TTY-only 'No semantic differences.' notice for zero-diff results.",
+    ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show the installed version and exit.",
+        callback=_version_callback,
+        is_eager=True,
     ),
 ) -> None:
     """Compare two JSON documents and render a review-oriented diff.

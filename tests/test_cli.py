@@ -22,6 +22,15 @@ def test_help_runs(tmp_path) -> None:
     assert result.returncode == 0
     assert "--view" in result.stdout
     assert "--color" in result.stdout
+    assert "--version" in result.stdout
+
+
+def test_version_runs(tmp_path) -> None:
+    result = _run_cli(tmp_path, "--version")
+
+    assert result.returncode == 0
+    assert result.stdout == "jdv 2.1.0\n"
+    assert result.stderr == ""
 
 
 def test_zero_diff_prints_nothing_in_non_tty(tmp_path, capsys) -> None:

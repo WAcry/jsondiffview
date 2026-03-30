@@ -3,17 +3,39 @@ requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "jdv"
-version = "0.1.0"
-description = "A JSON diff CLI focused on review-oriented output."
+name = "jsondiffview"
+version = "2.1.0"
+description = "A review-oriented JSON diff CLI focused on terminal-friendly output."
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+  { name = "David Zhang", email = "davidzhang2000@outlook.com" },
+]
+keywords = ["json", "diff", "cli", "terminal", "review"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Utilities",
+]
 dependencies = [
   "patiencediff>=0.2.18",
   "regex>=2026.3.32",
   "typer>=0.12,<1.0",
   "wcwidth>=0.6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/WAcry/jsondiffview"
+Repository = "https://github.com/WAcry/jsondiffview"
+Issues = "https://github.com/WAcry/jsondiffview/issues"
+Changelog = "https://github.com/WAcry/jsondiffview/releases"
 
 [project.scripts]
 jdv = "jdv.cli:entrypoint"
