@@ -86,7 +86,7 @@ jobs:
           assert cli_help.returncode == 0, cli_help
           assert cli_version.returncode == 0, cli_version
           assert module_help.returncode == 0, module_help
-          assert diff_result.returncode == 0, diff_result
+          assert diff_result.returncode == 1, diff_result
           assert "--view" in strip_ansi(cli_help.stdout), cli_help.stdout
           assert "--view" in strip_ansi(module_help.stdout), module_help.stdout
           assert cli_version.stdout == f"jdv {package_version}\n", cli_version.stdout
