@@ -79,6 +79,7 @@ def main(
     Notes:
 
       - Only one side may use '-' to read from stdin.
+      - Diff results exit 1 and print the review to stdout.
       - Zero-diff results exit 0 and print nothing to stdout.
       - Default array identity keys: id, key, name, title.
     """
@@ -116,6 +117,7 @@ def main(
             sys.stdout.write(rendered)
             if not rendered.endswith("\n"):
                 sys.stdout.write("\n")
+        raise typer.Exit(1)
     except JdvError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(2) from exc

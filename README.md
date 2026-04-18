@@ -114,7 +114,7 @@ Usage: jdv [OPTIONS] OLD_JSON NEW_JSON
 
 Either argument may be `-` to read from stdin (but not both).
 
-**Exit codes:** `0` = no differences (stdout is empty), `1` = differences found, `2` = error (invalid input, parse failure, etc.).
+**Exit codes:** `0` = no differences (stdout is empty), `1` = differences found (review is written to stdout), `2` = error (invalid input, parse failure, etc.).
 
 ## Strict JSON
 

@@ -149,7 +149,7 @@ def test_cli_renders_exact_value_move(tmp_path) -> None:
 
     result = _run_cli(tmp_path, str(old_path), str(new_path))
 
-    assert result.returncode == 0
+    assert result.returncode == 1
     assert "> moved $.items[0] -> $.items[1] (exact value)" in result.stdout
 
 
@@ -161,7 +161,7 @@ def test_cli_custom_match_key_matches_modified_object(tmp_path) -> None:
 
     result = _run_cli(tmp_path, "--match-key", "sku", str(old_path), str(new_path))
 
-    assert result.returncode == 0
+    assert result.returncode == 1
     assert '~ "v": 1 -> 2' in result.stdout
     assert '> removed ' not in result.stdout
 
@@ -174,7 +174,7 @@ def test_cli_numeric_type_difference_is_not_zero_diff(tmp_path) -> None:
 
     result = _run_cli(tmp_path, str(old_path), str(new_path))
 
-    assert result.returncode == 0
+    assert result.returncode == 1
     assert "~ $: 1 -> 1.0" in result.stdout
 
 
@@ -199,7 +199,7 @@ def test_color_always_emits_ansi_for_changed_lines(tmp_path) -> None:
 
     result = _run_cli(tmp_path, "--color", "always", str(old_path), str(new_path))
 
-    assert result.returncode == 0
+    assert result.returncode == 1
     assert "\x1b[" in result.stdout
 
 
@@ -211,11 +211,24 @@ def test_color_always_limits_string_ansi_to_label_and_changed_spans(tmp_path) ->
 
     result = _run_cli(tmp_path, "--color", "always", str(old_path), str(new_path))
 
-    assert result.returncode == 0
+    assert result.returncode == 1
     assert '\x1b[33m~ \x1b[0m\x1b[33m"tier": \x1b[0m' in result.stdout
     assert '\x1b[31m[-silver-]\x1b[0m' in result.stdout
     assert '\x1b[32m[+gold+]\x1b[0m tier' in result.stdout
     assert 'tier\x1b[0m"' not in result.stdout
+
+
+def test_diff_exit_code_is_one_and_stdout_contains_review(tmp_path) -> None:
+    old_path = tmp_path / "old.json"
+    new_path = tmp_path / "new.json"
+    old_path.write_text(json.dumps({"service": {"enabled": False}}), encoding="utf-8")
+    new_path.write_text(json.dumps({"service": {"enabled": True}}), encoding="utf-8")
+
+    result = _run_cli(tmp_path, str(old_path), str(new_path))
+
+    assert result.returncode == 1
+    assert '~ "enabled": false -> true' in result.stdout
+    assert result.stderr == ""
 
 
 def test_double_stdin_returns_usage_error(tmp_path) -> None:
