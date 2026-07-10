@@ -34,9 +34,7 @@ SCREENSHOT_MARKDOWN = (
     "![Terminal screenshot of jdv reviewing nested JSON changes, moves, "
     f"additions, and removals]({SCREENSHOT_URL})"
 )
-SCREENSHOT_SHA256 = (
-    "a9afbbd91e16f750fa6e7bdf2e78b9d940826715451cee79702d9c36d1dbb281"
-)
+SCREENSHOT_SHA256 = "a9afbbd91e16f750fa6e7bdf2e78b9d940826715451cee79702d9c36d1dbb281"
 PACKAGE_FILES = {
     f"{NAME}/{module}.py"
     for module in (
