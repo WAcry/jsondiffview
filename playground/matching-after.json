@@ -1,0 +1,27 @@
+{
+  "higher_priority_conflict": [
+    {
+      "id": "new-id",
+      "name": "shared-name",
+      "value": "after"
+    }
+  ],
+  "null_identity_fallback": [
+    {
+      "id": null,
+      "name": "worker",
+      "replicas": 2
+    },
+    {
+      "id": null,
+      "name": "api",
+      "replicas": 2
+    }
+  ],
+  "duplicate_exact_sequence": [
+    "beta",
+    "alpha",
+    "beta",
+    "alpha"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "project": "jsondiffview demo",
+  "version": 1,
+  "enabled": true,
+  "owner": {
+    "name": "Ava",
+    "team": "platform"
+  },
+  "services": [
+    {
+      "id": "api",
+      "port": 8080,
+      "status": "stable"
+    },
+    {
+      "id": "worker",
+      "port": 9000,
+      "status": "stable"
+    },
+    {
+      "id": "db",
+      "port": 5432,
+      "status": "stable"
+    }
+  ],
+  "message": "Deploy to staging on Friday",
+  "obsolete": {
+    "reason": "legacy"
+  }
+}

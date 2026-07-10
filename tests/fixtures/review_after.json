@@ -1,0 +1,8 @@
+{
+  "services": [
+    {"id": "api", "port": 80},
+    {"id": "db", "port": 5432},
+    {"id": "worker", "port": 9001}
+  ],
+  "title": "Hello team"
+}

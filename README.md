@@ -1,147 +1,257 @@
 # jsondiffview
 
-A review-oriented JSON diff for your terminal.
+`jdv` produces deterministic, JSON-shaped review text for humans. It
+compares strict JSON only: the first argument is the old (before) document and
+the second is the new (after) document.
 
-`jdv` compares two JSON documents and renders a human-readable diff that follows the structure of JSON itself. Instead of a flat patch list, the output looks like annotated JSON — you see what changed, where it moved, and what stayed the same, all in context.
+The output is annotated review text, not valid JSON, JSON Patch, or an
+applyable patch. Additions (`+`), removals (`-`), modifications (`~`), moves
+(`>`), omissions (`…`), and intraline spans (`[-old-]`, `[+new+]`) remain
+readable without color.
 
-The package published on PyPI is named `jsondiffview`, but the installed CLI command remains `jdv`.
+![Terminal screenshot of jdv reviewing nested JSON changes, moves, additions, and removals](https://raw.githubusercontent.com/WAcry/jsondiffview/main/playground/jdv-review.png)
 
-## Quick start
+> The package published on PyPI is named `jsondiffview`; the import package is
+> also `jsondiffview`, while the installed CLI command is `jdv`.
+>
+> Upgrading from 2.1.2? Read
+> [Migrating to 3.0.0](https://github.com/WAcry/jsondiffview/blob/main/MIGRATING.md).
+> This source tree builds local 3.0.0 artifacts but does not publish them.
 
+## Install and run
+
+For development:
+
+```console
+uv sync
+uv run jdv --help
 ```
-pip install jsondiffview
+
+Or build and install the local wheel:
+
+```console
+uv build --no-sources
+uv tool install ./dist/jsondiffview-3.0.0-py3-none-any.whl
 ```
 
-Or with [uv](https://docs.astral.sh/uv/):
+Both entry points use the same implementation:
 
-```
-uv tool install jsondiffview
-```
-
-Then compare two files:
-
-```
+```console
 jdv before.json after.json
+python -m jsondiffview before.json after.json
 ```
 
-![jdv compact view](https://raw.githubusercontent.com/WAcry/jsondiffview/v2.1.1/image.png)
+One input may be read from stdin:
 
-`+` marks additions. `-` marks removals. `~` marks modifications. `>` marks provenance notes (moves and removals). Unchanged siblings are collapsed into `…` summaries. Within modified strings, `[-old-]` and `[+new+]` highlight exactly what changed — with or without terminal colors.
-
-## View modes
-
-`jdv` offers three view modes that share the same underlying diff — they only differ in how much context is shown.
-
-| Mode | Flag | Purpose |
-|---|---|---|
-| **compact** | *(default)* | Collapses unchanged context and summarizes large add/remove blocks. Best for a quick overview. |
-| **focus** | `--view focus` | Shows the full changed material while still collapsing unchanged siblings. |
-| **full** | `--view full` | Expands everything — unchanged context, full subtrees — for complete review. |
-
-```
-jdv --view focus before.json after.json
-jdv --view full --color never before.json after.json
+```console
+cat before.json | jdv - after.json
 ```
 
-## String diffs
+Copy-ready PowerShell commands and editable sample documents are available in
+the [playground](playground/README.md).
 
-`jdv` automatically picks the best rendering for each string change.
+## Command
 
-**Short strings** get inline token-level diffs — whole words are replaced, not individual characters:
-
-```
-  ~ "review_label": "[-silver-][+gold+] tier"
-```
-
-**Single-token edits** that share a clear prefix/suffix show finer detail:
-
-```
-  ~ "release_track": "can[-did-][+rev+]ate"
-```
-
-**Multiline strings** are displayed as logical-line diffs with context:
-
-```
-  ~ "notes": <<2 lines>>
-      "Primary region rollout"
-    - "[-Legacy-] probes enabled"
-    + "[+Canary+] probes enabled"
-```
-
-**Long single-line payloads** (base64, JWTs, query strings, etc.) are summarized as hunk excerpts so they don't flood the terminal:
-
-```
-  ~ "session_fingerprint": string changed (264 -> 280 chars, 1 hunks)
-      … 140 chars of unchanged prefix omitted …
-    - "...token=[-abc123-]BBBB..."
-    + "...token=[+def456+]BBBB..."
-      … 128 chars of unchanged suffix omitted …
-```
-
-## Array matching
-
-`jdv` recognizes "the same item" in arrays by two high-confidence signals — it never guesses by position alone.
-
-**Identity keys.** By default, objects in arrays are matched by `id`, `key`, `name`, or `title`. When an item moves to a new index, `jdv` reports the move rather than showing a remove/add pair:
-
-```
-  > moved $.services[0] -> $.services[2] (id="svc-a")
-```
-
-You can supply your own keys with `--match-key` (replaces defaults):
-
-```
-jdv --match-key sku --match-key variant_id before.json after.json
-```
-
-**Exact value.** If no identity key is available but the entire value is byte-for-byte identical, `jdv` still recognizes it as the same item and can report it as moved.
-
-Items that cannot be matched by either signal are shown as remove + add — `jdv` does not fabricate matches.
-
-## CLI reference
-
-```
+```text
 Usage: jdv [OPTIONS] OLD_JSON NEW_JSON
+
+  Compare strict OLD_JSON (before) with NEW_JSON (after).
+
+Options:
+  -v, --view [summary|review|full]
+                                  Detail level.  [default: review]
+  -k, --match-key FIELD           Array-object identity key; repeat in
+                                  priority order. Any occurrence replaces
+                                  defaults: id, key, name, title.
+  -c, --color [auto|always|never]
+                                  Review color policy.  [default: auto]
+  -q, --quiet                     Suppress the equality notice only.
+  --version                       Show the version and exit.
+  -h, --help                      Show this message and exit.
 ```
 
-| Option | Short | Default | Description |
-|---|---|---|---|
-| `--view` | `-v` | `compact` | Review mode: `compact`, `focus`, or `full`. |
-| `--match-key FIELD` | `-k` | `id key name title` | Identity key for array objects. Repeat to set multiple. Replaces defaults when given. |
-| `--color` | `-c` | `auto` | Color mode: `auto`, `always`, or `never`. |
-| `--quiet` | `-q` | off | Suppress the "No semantic differences." notice on stderr. |
-| `--version` |  | off | Show the installed `jdv` version and exit. |
+Option choices and match-key names are case-sensitive. Repeating
+`--match-key` preserves command-line priority and replaces all default keys;
+supplying the same key twice is an error. `--` ends option parsing for paths
+that begin with `-`. A file literally named `-` is not addressable, and both
+arguments cannot use stdin.
 
-Either argument may be `-` to read from stdin (but not both).
+### Views
 
-**Exit codes:** `0` = no differences (stdout is empty), `1` = differences found (review is written to stdout), `2` = error (invalid input, parse failure, etc.).
+- `review` (default) expands every changed, added, and removed value and keeps
+  one adjacent unchanged sibling around each changed run.
+- `summary` collapses every unchanged sibling run and may summarize large
+  wholly added or removed containers with a bounded first-two-child preview
+  and exact omitted-descendant count.
+- `full` expands all structural context and added/removed subtrees.
 
-## Strict JSON
+All views use the same semantic comparison. Deterministic long-string safety
+limits remain active even in `full`.
 
-`jdv` rejects ambiguous input before comparing:
+### Status and stream contract
 
-- Duplicate object keys cause an immediate error.
-- `NaN`, `Infinity`, `-Infinity`, and overflowed literals like `1e999` are rejected.
-- `true`, `1`, `1.0`, and `"1"` are all treated as distinct values.
+| Status | Meaning | stdout | stderr |
+| ---: | --- | --- | --- |
+| `0` | Documents are equal | empty | `No semantic differences.` |
+| `1` | Differences were reviewed successfully | one review | empty |
+| `2` | Usage, input, parse, or output error | empty unless output failed | one diagnostic |
 
-## Color
+Status `1` is an expected `diff`-style result, not an operational failure.
+`--quiet` suppresses only the equality notice. A closed stdout pipe exits `2`
+without a diagnostic or traceback.
 
-When stdout is a terminal (or with `--color always`), `jdv` applies colors:
+A CI-safe shell pattern is:
 
-- `~` lines and field labels: **yellow**
-- `[-removed-]` spans: **red**
-- `[+added+]` spans: **green**
-- `>` provenance notes: **cyan**
-- Unchanged text: default terminal color
+```sh
+set +e
+jdv --color never before.json after.json
+status=$?
+set -e
+if [ "$status" -gt 1 ]; then
+  exit "$status"
+fi
+```
 
-Colors only enhance — all diff semantics are readable in plain text through `~`, `+`, `-`, `[-…-]`, and `[+…+]` markers.
+## Review format
+
+Every physical line starts with a two-column semantic prefix. Object keys are
+JSON strings; array entries use new indexes such as `[2]:`, while unmatched
+removals use old indexes such as `[old 4]:`.
+
+```text
+~ {
+~   "services": [
+      [0]: {
+        "id": "api",
+…       1 unchanged field omitted
+      },
+>     moved from $.services[2] to $.services[1] (matched by "id": "db")
+      [1]: {
+        "id": "db",
+…       1 unchanged field omitted
+      },
+~     [2]: {
+        "id": "worker",
+~       "port": 9000 -> 9001
+      }
+    ],
+~   "title": "Hello [-world-][+team+]",
+-   "obsolete": true
+  }
+```
+
+Modified short strings use Unicode grapheme-safe word-, whitespace-, and
+punctuation-segment spans. When one identifier or number segment has a useful
+shared prefix or suffix, finer grapheme detail is used without splitting a
+user-perceived character. Multiline strings are compared as exact logical
+lines, with line terminators visible as JSON escapes; sufficiently similar
+replacement lines can show side-specific intraline spans. Over-budget
+multiline changes retain bounded first/last previews with exact omitted line
+and code-point counts. Adaptive classification keeps prose inline while
+routing dense separators and opaque runs to bounded hunk output. Long
+single-line strings report Unicode code-point lengths, half-open offsets,
+display-cell-bounded excerpts, and exact omission counts. All matching and
+output limits are deterministic work counters, including in `full`. Strings
+shown only on one side or as unchanged context are also bounded at 512 code
+points, including values containing line breaks.
+
+The main review above includes a pure move (`db`). Array removals retain their
+old index:
+
+```text
+~ [
+    [0]: "keep",
+-   [old 1]: "gone"
+  ]
+```
+
+A moved entry can also contain a nested modification:
+
+```text
+~ [
+>   moved from $[1] to $[0] (matched by "id": "b")
+~   [0]: {
+      "id": "b",
+~     "v": 1 -> 2
+    },
+    [1]: {
+      "id": "a",
+…     1 unchanged field omitted
+    }
+  ]
+```
+
+Ambiguous identity values remain explicit additions and removals:
+
+```text
+~ [
++   [0]: {
++     "id": "x",
++     "v": 3
++   },
++   [1]: {
++     "id": "x",
++     "v": 4
++   },
+-   [old 0]: {
+-     "id": "x",
+-     "v": 1
+-   },
+-   [old 1]: {
+-     "id": "x",
+-     "v": 2
+-   }
+  ]
+```
+
+Color is presentation only: yellow marks modifications, red removals, green
+additions, and cyan move provenance. `--color auto` requires a terminal and an
+absent or empty `NO_COLOR`; `always` overrides both redirection and
+`NO_COLOR`; `never` disables ANSI. `FORCE_COLOR` is intentionally ignored.
+
+## Strict JSON and matching
+
+Inputs use RFC JSON syntax with unique object names and project-owned numeric
+limits:
+
+- UTF-8 and an optional leading UTF-8 BOM are accepted.
+- Duplicate object keys, `NaN`, `Infinity`, and `-Infinity` are rejected.
+- Integer literals are limited to 4,300 digits.
+- Decimal/exponent lexemes are limited to 10,000 code points.
+- Container nesting is limited to 256 levels; there is no global file-size
+  limit.
+- A decimal/exponent value whose binary64 conversion is non-finite, such as
+  `1e999`, is rejected.
+- Integer `1`, decimal/exponent `1.0`, boolean `true`, and string `"1"` are
+  distinct. Decimal spellings `1.0` and `1.00` compare equal.
+- Object member order is ignored; array order matters.
+
+Array entries are never paired by position or fuzzy similarity. Object entries
+pair only when a configured identity value is unique on both sides. The
+defaults are `id`, `key`, `name`, and `title`; use `-k FIELD` to replace them.
+Remaining globally unique entries pair by exact strict value. Repeated exact
+values may align monotonically to stabilize the review, but that alignment is
+not identity evidence and never fabricates a move. Other ambiguous values
+remain a removal plus an addition. Null, object, and array identity-key values
+are unavailable, and a lower-priority key cannot override conflicting
+higher-priority scalar identities.
+
+Moves are the minimal deterministic relative-order changes among matched
+entries. Insertions and removals that merely shift absolute indexes do not
+mark every survivor as moved. A moved entry keeps its old/new paths and can
+also show nested modifications.
 
 ## Development
 
-```
-uv sync
-uv run python -m jdv --help
-uv run jdv --version
-uv run pytest -q
+```console
+uv sync --locked --group dev
+uv run --locked pytest -q
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked mypy src tests
+uv run --locked python -m jsondiffview --help
+uv run --locked jdv --version
 uv build --no-sources
 ```
+
+The package supports CPython 3.11 and newer.

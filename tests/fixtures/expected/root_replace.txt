@@ -1,9 +1,0 @@
-~ $:
-  - {
-    - "feature_flags": {
-      - "legacy": true
-    - }
-  - }
-  + [
-    + "preview"
-  + ]

@@ -1,3 +1,0 @@
-{
-  ~ "tier": "[-silver-][+gold+] tier"
-}

@@ -1,8 +1,0 @@
-{
-  "meta": {
-    … 3 unchanged keys,
-    + "d": 4,
-    + "e": 5
-  },
-  "env": "prod"
-}

@@ -1,0 +1,7 @@
+{
+  "short": "Release candidate is ready for staging.",
+  "graphemes": "Reviewer 👩🏽‍💻 approves the 東京 rollout.",
+  "dense": "https://api.example.test/v3/deploy?environment=staging&region=us-east-1&strategy=rolling&batch=10&timeout=300&checks=health,metrics,logs&notify=release-team@example.test",
+  "multiline": "step 1: build\nstep 2: test\nstep 3: deploy to staging\nstep 4: verify\n",
+  "long": "This deliberately long single-line value repeats enough context to exercise bounded blob excerpts. Segment 01 remains stable. Segment 02 remains stable. Segment 03 remains stable. Segment 04 contains the old deployment target. Segment 05 remains stable. Segment 06 remains stable. Segment 07 remains stable. Segment 08 remains stable. Segment 09 remains stable. Segment 10 remains stable. Segment 11 remains stable. Segment 12 remains stable. Segment 13 remains stable. Segment 14 remains stable. Segment 15 remains stable. Segment 16 remains stable."
+}

@@ -1,0 +1,9 @@
+{
+  "name": "jsondiffview playground",
+  "enabled": true,
+  "retries": 3,
+  "tags": [
+    "demo",
+    "strict-json"
+  ]
+}

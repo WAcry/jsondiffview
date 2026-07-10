@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    {
+      "uuid": "node-a",
+      "label": "API",
+      "replicas": 2
+    },
+    {
+      "uuid": "node-b",
+      "label": "Worker",
+      "replicas": 1
+    },
+    {
+      "uuid": "node-c",
+      "label": "Database",
+      "replicas": 1
+    }
+  ]
+}

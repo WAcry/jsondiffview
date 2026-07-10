@@ -1,0 +1,34 @@
+{
+  "project": "jsondiffview playground",
+  "version": 1.0,
+  "enabled": true,
+  "owner": {
+    "name": "Ava",
+    "team": "developer-experience",
+    "timezone": "UTC"
+  },
+  "services": [
+    {
+      "id": "api",
+      "port": 8080,
+      "status": "stable"
+    },
+    {
+      "id": "db",
+      "port": 5432,
+      "status": "stable"
+    },
+    {
+      "id": "worker",
+      "port": 9001,
+      "status": "stable"
+    },
+    {
+      "id": "cache",
+      "port": 6379,
+      "status": "new"
+    }
+  ],
+  "message": "Deploy to production on Friday",
+  "notes": "Try summary, review, and full."
+}

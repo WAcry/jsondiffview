@@ -1,15 +1,16 @@
 [build-system]
-requires = ["hatchling>=1.27.0"]
+requires = ["hatchling>=1.30,<2"]
 build-backend = "hatchling.build"
 
 [project]
 name = "jsondiffview"
-dynamic = ["version"]
-description = "A review-oriented JSON diff CLI focused on terminal-friendly output."
+version = "3.0.0"
+description = "Deterministic, review-oriented strict JSON diffs for humans"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
+import-names = ["jsondiffview"]
 authors = [
   { name = "David Zhang", email = "davidzhang2000@outlook.com" },
 ]
@@ -23,14 +24,14 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Testing",
   "Topic :: Utilities",
 ]
 dependencies = [
-  "patiencediff>=0.2.18",
-  "regex>=2026.3.32",
-  "typer>=0.12,<1.0",
-  "wcwidth>=0.6.0",
+  "click>=8.4.2,<8.5",
+  "regex==2026.6.28",
+  "wcwidth==0.8.2",
 ]
 
 [project.urls]
@@ -40,19 +41,53 @@ Issues = "https://github.com/WAcry/jsondiffview/issues"
 Changelog = "https://github.com/WAcry/jsondiffview/releases"
 
 [project.scripts]
-jdv = "jdv.cli:entrypoint"
+jdv = "jsondiffview.cli:main"
 
 [dependency-groups]
 dev = [
-  "pytest>=8.3,<9.0",
+  "mypy>=1.17",
+  "pytest>=8.4",
+  "readme-renderer[md]>=45.0",
+  "ruff>=0.12",
+  "types-regex>=2026.6.28.20260630",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/jdv"]
+packages = ["src/jsondiffview"]
+core-metadata-version = "2.5"
 
-[tool.hatch.version]
-path = "src/jdv/__init__.py"
+[tool.hatch.build.targets.sdist]
+core-metadata-version = "2.5"
+include = [
+  "/LICENSE",
+  "/MIGRATING.md",
+  "/README.md",
+  "/benchmarks",
+  "/playground",
+  "/pyproject.toml",
+  "/src",
+  "/tests",
+  "/uv.lock",
+]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+addopts = "--strict-config --strict-markers"
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+extend-exclude = [".cursor", ".trellis"]
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "tests"]
+exclude = ["build"]
+warn_unreachable = true
