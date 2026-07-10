@@ -31,7 +31,7 @@ jobs:
       - run: uv sync --locked --group dev
       - run: uv run --locked ruff check .
       - run: uv run --locked ruff format --check .
-      - run: uv run --locked mypy src tests
+      - run: uv run --locked mypy src tests scripts
       - run: uv run --locked pytest -q tests/integration/test_workflow_policy.py
 
   tests:

@@ -186,6 +186,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "mypy" },
+    { name = "packaging" },
     { name = "pytest" },
     { name = "readme-renderer", extra = ["md"] },
     { name = "ruff" },
@@ -202,6 +203,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "mypy", specifier = ">=1.17" },
+    { name = "packaging", specifier = "==26.2" },
     { name = "pytest", specifier = ">=8.4" },
     { name = "readme-renderer", extras = ["md"], specifier = ">=45.0" },
     { name = "ruff", specifier = ">=0.12" },

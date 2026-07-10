@@ -36,7 +36,7 @@ Python 3.11 and newer remain supported; the 3.0.0 quality matrix covers
 CPython 3.11 through 3.14. Imports of v2 internals were never a supported public
 Python API and are not carried forward.
 
-This source tree prepares local 3.0.0 artifacts but does not publish them.
-Until a separate release is performed, a generic package-index install may
-still resolve the public 2.1.2 release. Build and install the local wheel when
-testing this migration.
+Version 3 publication is a separate guarded operation over the exact validated
+GitHub Release archives. Until that operation completes, a generic
+package-index install may still resolve the public 2.1.2 release. Build and
+install the local wheel when testing this migration before publication.

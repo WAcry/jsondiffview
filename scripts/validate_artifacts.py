@@ -153,7 +153,7 @@ def main() -> int:
     wheel, sdist = _resolve_archives(arguments.dist)
     _validate_wheel(wheel)
     _validate_sdist(sdist)
-    _validate_lock(wheel.parents[1] / "uv.lock")
+    _validate_lock(Path(__file__).resolve().parents[1] / "uv.lock")
     if arguments.rebuild_sdist:
         _rebuild_sdist(sdist)
     print(f"validated {wheel.name} and {sdist.name}")
@@ -310,6 +310,13 @@ def _validate_lock(lock_path: Path) -> None:
     assert package_block in text
     assert 'name = "regex"\nversion = "2026.6.28"' in text
     assert 'name = "wcwidth"\nversion = "0.8.2"' in text
+    assert 'name = "packaging"\nversion = "26.2"' in text
+    assert (
+        "packaging-26.2-py3-none-any.whl"
+        '", hash = "sha256:'
+        "5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e"
+        '"' in text
+    )
     assert "patiencediff" not in text
 
 

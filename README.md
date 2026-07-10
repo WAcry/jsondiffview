@@ -16,7 +16,8 @@ readable without color.
 >
 > Upgrading from 2.1.2? Read
 > [Migrating to 3.0.0](https://github.com/WAcry/jsondiffview/blob/main/MIGRATING.md).
-> This source tree builds local 3.0.0 artifacts but does not publish them.
+> Version 3 publication uses only validated GitHub Release archives and the
+> protected PyPI Trusted Publisher workflow.
 
 ## Install and run
 
@@ -248,10 +249,36 @@ uv sync --locked --group dev
 uv run --locked pytest -q
 uv run --locked ruff check .
 uv run --locked ruff format --check .
-uv run --locked mypy src tests
+uv run --locked mypy src tests scripts
 uv run --locked python -m jsondiffview --help
 uv run --locked jdv --version
 uv build --no-sources
 ```
 
 The package supports CPython 3.11 and newer.
+
+## Release publication
+
+`.github/workflows/publish.yml` is the only publication surface. A final
+GitHub Release must point to a commit with a successful `Quality` run and
+contain exactly the expected wheel and sdist. The workflow downloads those
+archives without rebuilding them, validates their Metadata 2.5 contents, and
+compares exact filenames and SHA-256 digests with PyPI.
+The SHA-pinned PyPA action v1.14.0 bundles Twine 6.1.0 and Packaging 25.0.
+Before OIDC starts, the workflow stages Packaging 26.2 from `uv.lock`, verifies
+both its pinned wheel and source-tree SHA-256, and installs a fail-closed parser
+overlay ahead of the action's bundled dependency. The overlay does not change
+either archive.
+
+An exact existing release is a successful no-op. Conflicting or unexpected
+files stop publication; a partial exact release stages only its missing files.
+Any required upload uses the configured PyPI Trusted Publisher and the `pypi`
+GitHub environment, then the workflow polls for the exact files and verifies a
+clean index install through both `jdv` and
+`python -m jsondiffview`.
+
+Maintainers should require approval by a trusted reviewer and configure
+selected deployment refs separately for branch `main` and tags `v*`. Manual
+dispatch is accepted only from `main`; a `release: published` run uses its
+matching tag ref. The same workflow therefore handles future published releases
+and deliberate repeat dispatches for existing final release tags.

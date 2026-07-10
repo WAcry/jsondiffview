@@ -1,0 +1,226 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing final GitHub Release tag (for example, v3.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Validate release and PyPI state
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      source-commit: ${{ steps.source.outputs.commit }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      commit: ${{ steps.release.outputs.commit }}
+      wheel-sha256: ${{ steps.release.outputs.wheel-sha256 }}
+      sdist-sha256: ${{ steps.release.outputs.sdist-sha256 }}
+      needs-publish: ${{ steps.preflight.outputs.needs-publish }}
+    steps:
+      - name: Require the trusted trigger ref
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          REQUESTED_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          case "$EVENT_NAME" in
+            workflow_dispatch)
+              test "$WORKFLOW_REF" = "refs/heads/$DEFAULT_BRANCH"
+              ;;
+            release)
+              test "$WORKFLOW_REF" = "refs/tags/$REQUESTED_TAG"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
+      - name: Check out trusted publication code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Record trusted publication code commit
+        id: source
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          commit="$(git rev-parse HEAD)"
+          test "$commit" = "$WORKFLOW_SHA"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+      - name: Set up locked Python environment
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.28"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --group dev
+      - name: Download exact GitHub Release archives
+        id: release
+        env:
+          REQUESTED_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: >-
+          uv run --locked python scripts/download_release.py
+          --repository WAcry/jsondiffview
+          --tag "$REQUESTED_TAG"
+          --dist dist
+          --github-output "$GITHUB_OUTPUT"
+      - name: Check wheel contents
+        run: >-
+          uvx --from check-wheel-contents==0.6.3
+          check-wheel-contents dist/*.whl
+      - name: Validate Metadata 2.5 archives
+        run: uv run --locked python scripts/validate_artifacts.py dist
+      - name: Preflight exact PyPI filenames and digests
+        id: preflight
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: >-
+          uv run --locked python scripts/pypi_publication.py
+          --version "$VERSION"
+          --dist dist
+          preflight
+          --github-output "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish missing files
+    if: needs.inspect.outputs.needs-publish == 'true'
+    needs: inspect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out trusted publication code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.inspect.outputs.source-commit }}
+          persist-credentials: false
+      - name: Set up locked Python environment
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.28"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --group dev
+      - name: Re-download unchanged GitHub Release archives
+        env:
+          REQUESTED_TAG: ${{ needs.inspect.outputs.tag }}
+          EXPECTED_COMMIT: ${{ needs.inspect.outputs.commit }}
+          EXPECTED_WHEEL_SHA256: ${{ needs.inspect.outputs.wheel-sha256 }}
+          EXPECTED_SDIST_SHA256: ${{ needs.inspect.outputs.sdist-sha256 }}
+        run: >-
+          uv run --locked python scripts/download_release.py
+          --repository WAcry/jsondiffview
+          --tag "$REQUESTED_TAG"
+          --dist dist
+          --expected-commit "$EXPECTED_COMMIT"
+          --expected-wheel-sha256 "$EXPECTED_WHEEL_SHA256"
+          --expected-sdist-sha256 "$EXPECTED_SDIST_SHA256"
+      - name: Recheck wheel contents
+        run: >-
+          uvx --from check-wheel-contents==0.6.3
+          check-wheel-contents dist/*.whl
+      - name: Revalidate Metadata 2.5 archives
+        run: uv run --locked python scripts/validate_artifacts.py dist
+      - name: Recheck PyPI immediately before publication
+        id: preflight
+        env:
+          VERSION: ${{ needs.inspect.outputs.version }}
+        run: >-
+          uv run --locked python scripts/pypi_publication.py
+          --version "$VERSION"
+          --dist dist
+          preflight
+          --stage-dir .publish-dist
+          --github-output "$GITHUB_OUTPUT"
+      - name: Stage pinned Metadata 2.5 publisher support
+        if: steps.preflight.outputs.needs-publish == 'true'
+        run: >-
+          uv run --locked python -m scripts.prepare_publisher_compat
+          .pypi-action-compat
+      - name: Publish exact missing archives with attestations
+        if: steps.preflight.outputs.needs-publish == 'true'
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        env:
+          PYTHONPATH: /github/workspace/.pypi-action-compat
+        with:
+          packages-dir: .publish-dist
+          skip-existing: true
+          attestations: true
+          # The fail-closed overlay lets the pinned action recheck Metadata 2.5.
+          verify-metadata: true
+          verbose: false
+          print-hash: true
+
+  verify:
+    name: Verify PyPI release
+    if: >-
+      always() &&
+      needs.inspect.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    needs: [inspect, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out trusted verification code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ needs.inspect.outputs.source-commit }}
+          persist-credentials: false
+      - name: Set up locked Python environment
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.28"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --group dev
+      - name: Re-download release manifest source
+        env:
+          REQUESTED_TAG: ${{ needs.inspect.outputs.tag }}
+          EXPECTED_COMMIT: ${{ needs.inspect.outputs.commit }}
+          EXPECTED_WHEEL_SHA256: ${{ needs.inspect.outputs.wheel-sha256 }}
+          EXPECTED_SDIST_SHA256: ${{ needs.inspect.outputs.sdist-sha256 }}
+        run: >-
+          uv run --locked python scripts/download_release.py
+          --repository WAcry/jsondiffview
+          --tag "$REQUESTED_TAG"
+          --dist dist
+          --expected-commit "$EXPECTED_COMMIT"
+          --expected-wheel-sha256 "$EXPECTED_WHEEL_SHA256"
+          --expected-sdist-sha256 "$EXPECTED_SDIST_SHA256"
+      - name: Poll for exact PyPI filenames and digests
+        env:
+          VERSION: ${{ needs.inspect.outputs.version }}
+        run: >-
+          uv run --locked python scripts/pypi_publication.py
+          --version "$VERSION"
+          --dist dist
+          verify
+          --attempts 18
+          --delay-seconds 10
+      - name: Clean-install and verify both public entry points
+        env:
+          VERSION: ${{ needs.inspect.outputs.version }}
+        run: >-
+          uv run --locked python scripts/validate_clean_install.py
+          --pypi-version "$VERSION"

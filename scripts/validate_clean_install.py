@@ -21,15 +21,28 @@ def main() -> int:
         "wheel",
         nargs="?",
         type=Path,
-        default=Path("dist"),
         help="Exact wheel or directory containing it.",
     )
+    parser.add_argument(
+        "--pypi-version",
+        help="Install this exact version from the production PyPI index.",
+    )
     arguments = parser.parse_args()
-    wheel = (
-        arguments.wheel / WHEEL_NAME if arguments.wheel.is_dir() else arguments.wheel
-    ).resolve()
-    assert wheel.name == WHEEL_NAME
-    assert wheel.is_file()
+    if arguments.pypi_version is not None:
+        assert arguments.wheel is None, (
+            "wheel and --pypi-version are mutually exclusive"
+        )
+        assert arguments.pypi_version == VERSION
+        wheel: Path | None = None
+        version = arguments.pypi_version
+    else:
+        wheel_argument = arguments.wheel or Path("dist")
+        wheel = (
+            wheel_argument / WHEEL_NAME if wheel_argument.is_dir() else wheel_argument
+        ).resolve()
+        assert wheel.name == WHEEL_NAME
+        assert wheel.is_file()
+        version = VERSION
 
     with tempfile.TemporaryDirectory(prefix="jsondiffview-clean-") as raw:
         root = Path(raw)
@@ -41,27 +54,45 @@ def main() -> int:
             check=True,
         )
         python, scripts = _environment_paths(environment_path)
+        environment = _clean_environment(environment_path, scripts)
+        index_arguments = [
+            "--index-url",
+            "https://pypi.org/simple/",
+            "--no-cache-dir",
+            "--retries",
+            "5",
+            "--timeout",
+            "15",
+        ]
+        install_target = f"{NAME}=={version}" if wheel is None else str(wheel)
         subprocess.run(
             [
                 str(python),
                 "-m",
                 "pip",
+                "--isolated",
                 "install",
+                *index_arguments,
+                "--keyring-provider",
+                "disabled",
+                "--no-input",
                 "--only-binary=:all:",
-                str(wheel),
+                install_target,
             ],
+            env=environment,
             check=True,
         )
         subprocess.run(
-            [str(python), "-m", "pip", "check"],
+            [str(python), "-m", "pip", "--isolated", "check"],
+            env=environment,
             check=True,
         )
-        environment = _clean_environment(environment_path, scripts)
-        _validate_metadata_identity(python, work, environment)
-        _validate_entry_points(python, scripts, work, environment)
+        _validate_metadata_identity(python, work, environment, version)
+        _validate_entry_points(python, scripts, work, environment, version)
         _validate_negative_identities(python, scripts, work, environment)
 
-    print(f"clean-install validation passed for {wheel.name}")
+    source = wheel.name if wheel is not None else f"PyPI {NAME}=={version}"
+    print(f"clean-install validation passed for {source}")
     return 0
 
 
@@ -75,7 +106,16 @@ def _environment_paths(environment: Path) -> tuple[Path, Path]:
 def _clean_environment(environment: Path, scripts: Path) -> dict[str, str]:
     result = os.environ.copy()
     result.pop("PYTHONHOME", None)
+    for name in tuple(result):
+        if name.startswith(("PIP_", "UV_INDEX", "UV_DEFAULT_INDEX")):
+            result.pop(name)
     result["PYTHONPATH"] = ""
+    result["PYTHONNOUSERSITE"] = "1"
+    home = environment.parent / "home"
+    home.mkdir()
+    result["HOME"] = str(home)
+    result["USERPROFILE"] = str(home)
+    result["XDG_CONFIG_HOME"] = str(home / ".config")
     result["VIRTUAL_ENV"] = str(environment)
     result["PATH"] = str(scripts)
     result["NO_COLOR"] = "1"
@@ -86,14 +126,15 @@ def _validate_metadata_identity(
     python: Path,
     work: Path,
     environment: dict[str, str],
+    version: str,
 ) -> None:
-    code = """
+    code = f"""
 import importlib.metadata
 import importlib.util
 import jsondiffview
 
-assert importlib.metadata.version("jsondiffview") == "3.0.0"
-assert jsondiffview.__version__ == "3.0.0"
+assert importlib.metadata.version("jsondiffview") == {version!r}
+assert jsondiffview.__version__ == {version!r}
 assert importlib.util.find_spec("jsondiffview") is not None
 for name in ("jdv", "jsondiff", "jsondiff_review"):
     assert importlib.util.find_spec(name) is None, name
@@ -112,7 +153,7 @@ for name in ("jdv", "jsondiff", "jsondiff-review", "jsondiff_review"):
     except importlib.metadata.PackageNotFoundError:
         pass
     else:
-        raise AssertionError(f"legacy distribution alias is installed: {name}")
+        raise AssertionError(f"legacy distribution alias is installed: {{name}}")
 """
     _run([str(python), "-c", code], work, environment, 0)
 
@@ -122,6 +163,7 @@ def _validate_entry_points(
     scripts: Path,
     work: Path,
     environment: dict[str, str],
+    version: str,
 ) -> None:
     command = scripts / ("jdv.exe" if os.name == "nt" else "jdv")
     assert command.is_file()
@@ -133,9 +175,9 @@ def _validate_entry_points(
     invalid.write_text('{"value":}', encoding="utf-8")
 
     for prefix in ([str(command)], [str(python), "-m", "jsondiffview"]):
-        version = _run([*prefix, "--version"], work, environment, 0)
-        assert version.stdout == b"jdv 3.0.0\n"
-        assert version.stderr == b""
+        version_result = _run([*prefix, "--version"], work, environment, 0)
+        assert version_result.stdout == f"jdv {version}\n".encode()
+        assert version_result.stderr == b""
         for help_option in ("-h", "--help"):
             help_result = _run(
                 [*prefix, help_option],

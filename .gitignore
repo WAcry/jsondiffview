@@ -1,6 +1,8 @@
 /.venv/
 /build/
 /dist/
+/.pypi-action-compat/
+/.publish-dist/
 /.pytest_cache/
 /.mypy_cache/
 /.ruff_cache/
