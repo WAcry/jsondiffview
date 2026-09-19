@@ -33,7 +33,7 @@ from scripts.pypi_publication import (
 )
 
 PROJECT = "jsondiffview"
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 
 
 @pytest.fixture

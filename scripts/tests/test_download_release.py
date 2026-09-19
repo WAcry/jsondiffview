@@ -16,7 +16,7 @@ from scripts.download_release import (
     resolve_release,
 )
 
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 TAG = f"v{VERSION}"
 COMMIT = "1" * 40
 ANNOTATED_TAG = "2" * 40

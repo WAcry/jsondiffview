@@ -21,7 +21,7 @@ from pathlib import Path, PurePosixPath
 from readme_renderer import markdown
 
 NAME = "jsondiffview"
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 WHEEL_NAME = f"{NAME}-{VERSION}-py3-none-any.whl"
 SDIST_NAME = f"{NAME}-{VERSION}.tar.gz"
 DIST_INFO = f"{NAME}-{VERSION}.dist-info"
@@ -310,7 +310,7 @@ def _parse_metadata(data: bytes) -> Message:
 
 def _validate_lock(lock_path: Path) -> None:
     text = lock_path.read_text(encoding="utf-8")
-    package_block = 'name = "jsondiffview"\nversion = "3.0.0"'
+    package_block = 'name = "jsondiffview"\nversion = "3.1.0"'
     assert package_block in text
     assert 'name = "regex"\nversion = "2026.6.28"' in text
     assert 'name = "wcwidth"\nversion = "0.8.2"' in text

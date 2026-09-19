@@ -61,7 +61,7 @@ def test_project_metadata_exposes_only_current_identity() -> None:
     )
 
     assert metadata["project"]["name"] == "jsondiffview"
-    assert metadata["project"]["version"] == "3.0.0"
+    assert metadata["project"]["version"] == "3.1.0"
     assert metadata["project"]["license"] == "MIT"
     assert metadata["project"]["license-files"] == ["LICENSE"]
     assert metadata["project"]["import-names"] == ["jsondiffview"]
@@ -136,11 +136,11 @@ def test_authored_and_installed_versions_agree() -> None:
     metadata = tomllib.loads(
         (project_root / "pyproject.toml").read_text(encoding="utf-8")
     )
-    assert metadata["project"]["version"] == "3.0.0"
-    assert distribution_version("jsondiffview") == "3.0.0"
-    assert jsondiffview.__version__ == "3.0.0"
+    assert metadata["project"]["version"] == "3.1.0"
+    assert distribution_version("jsondiffview") == "3.1.0"
+    assert jsondiffview.__version__ == "3.1.0"
     assert (project_root / "uv.lock").read_text(encoding="utf-8").count(
-        'name = "jsondiffview"\nversion = "3.0.0"'
+        'name = "jsondiffview"\nversion = "3.1.0"'
     ) == 1
 
 
@@ -438,7 +438,7 @@ def test_help_version_and_console_entry_point_do_not_read_inputs() -> None:
     assert b"-h, --help" in help_result.stdout
     assert help_result.stderr == b""
     assert version_result.returncode == 0
-    assert version_result.stdout == b"jdv 3.0.0\n"
+    assert version_result.stdout == b"jdv 3.1.0\n"
     assert version_result.stderr == b""
 
     readme = (Path(__file__).parents[2] / "README.md").read_text(encoding="utf-8")
@@ -452,7 +452,7 @@ def test_help_version_and_console_entry_point_do_not_read_inputs() -> None:
         check=False,
     )
     assert console.returncode == 0
-    assert console.stdout == b"jdv 3.0.0\n"
+    assert console.stdout == b"jdv 3.1.0\n"
 
 
 def test_double_dash_allows_option_like_paths(tmp_path: Path) -> None:

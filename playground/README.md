@@ -12,7 +12,7 @@ $LASTEXITCODE
 ```
 
 The sync and version commands should each print status `0`; the version line is
-`jdv 3.0.0`.
+`jdv 3.1.0`.
 
 `jdv` follows the traditional diff exit-code convention:
 

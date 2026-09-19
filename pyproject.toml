@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jsondiffview"
-version = "3.0.0"
+version = "3.1.0"
 description = "Deterministic, review-oriented strict JSON diffs for humans"
 readme = "README.md"
 requires-python = ">=3.11"
