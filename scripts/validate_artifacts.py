@@ -48,6 +48,7 @@ PACKAGE_FILES = {
         "parser",
         "render",
         "strings",
+        "terminal",
     )
 }
 TEST_FILES = {
@@ -63,6 +64,7 @@ TEST_FILES = {
     "tests/unit/test_matching.py",
     "tests/unit/test_parser.py",
     "tests/unit/test_render.py",
+    "tests/unit/test_review_invariants.py",
     "tests/unit/test_strings.py",
     "tests/unit/test_v2_migration_regressions.py",
 }
@@ -90,6 +92,8 @@ SDIST_FILES = (
         "README.md",
         "PKG-INFO",
         "benchmarks/benchmark_jsondiffview.py",
+        "benchmarks/benchmark_review_invariants.py",
+        "docs/review-core-audit.md",
         "pyproject.toml",
         "uv.lock",
     }

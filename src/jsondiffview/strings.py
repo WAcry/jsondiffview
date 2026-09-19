@@ -48,6 +48,7 @@ REVIEW_CONTEXT_LINES = 2
 SUMMARY_EXCERPT_CELLS = 48
 REVIEW_EXCERPT_CELLS = 96
 FULL_EXCERPT_CELLS = 160
+EXCERPT_CODE_POINT_LIMIT = 512
 
 _GRAPHEME_RE = regex.compile(r"\X")
 _LINE_RE = regex.compile(r"[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$")
@@ -495,22 +496,48 @@ def bounded_excerpt(
     text: str,
     max_cells: int = REVIEW_EXCERPT_CELLS,
     escape_for_width: EscapeForWidth | None = None,
+    *,
+    max_code_points: int = EXCERPT_CODE_POINT_LIMIT,
 ) -> Excerpt:
-    """Clip escaped display cells without splitting an extended grapheme."""
+    """Bound cells and code points without splitting an extended grapheme.
 
+    Display cells alone do not bound output: one cell can contain arbitrarily
+    many combining marks. The code-point allowance includes the omission mark.
+    An indivisible over-budget grapheme is omitted whole, never cut in half.
+    """
+
+    if max_cells < 0 or max_code_points < 0:
+        raise ValueError("excerpt budgets must be non-negative")
     escaper = escape_for_width or _identity_text
-    if _fits_display_cells(text, max_cells, escaper):
-        return Excerpt(text, 0, 0, len(text))
     if not text:
         return Excerpt("", 0, 0, 0)
-    if max_cells <= 1:
+    if max_cells == 0 or max_code_points == 0:
+        return Excerpt("", len(text), 0, len(text))
+    if len(text) <= max_code_points and _fits_display_cells(text, max_cells, escaper):
+        return Excerpt(text, 0, 0, len(text))
+    if max_cells <= 1 or max_code_points <= 1:
         return Excerpt("…", len(text), 0, len(text))
 
     inner = max_cells - display_width("…")
     left_budget = inner // 2
     right_budget = inner - left_budget
-    left = _take_text_left(text, 0, len(text), left_budget, escaper)
-    right = _take_text_right(text, 0, len(text), right_budget, escaper)
+    inner_code_points = max_code_points - 1
+    left = _take_text_left(
+        text,
+        0,
+        len(text),
+        left_budget,
+        escaper,
+        max_code_points=inner_code_points // 2,
+    )
+    right = _take_text_right(
+        text,
+        0,
+        len(text),
+        right_budget,
+        escaper,
+        max_code_points=inner_code_points - inner_code_points // 2,
+    )
     while left and right and left[-1].end > right[0].start:
         right = right[1:]
     rendered = (
@@ -2028,6 +2055,7 @@ def _hunk_excerpt(
     remaining = max(width - changed_width, 0)
     left_budget = remaining // 2
     right_budget = remaining - left_budget
+    remaining_code_points = EXCERPT_CODE_POINT_LIMIT - len(changed)
     left = list(
         _take_text_right(
             text,
@@ -2035,6 +2063,7 @@ def _hunk_excerpt(
             start,
             left_budget,
             escape_for_width,
+            max_code_points=remaining_code_points // 2,
         )
     )
     right = list(
@@ -2044,6 +2073,7 @@ def _hunk_excerpt(
             upper,
             right_budget,
             escape_for_width,
+            max_code_points=remaining_code_points - remaining_code_points // 2,
         )
     )
     candidate = (
@@ -2088,10 +2118,18 @@ def _take_text_left(
     end: int,
     max_cells: int,
     escape_for_width: EscapeForWidth,
+    *,
+    max_code_points: int = EXCERPT_CODE_POINT_LIMIT,
 ) -> tuple[Grapheme, ...]:
+    if max_cells <= 0 or max_code_points <= 0:
+        return ()
     chosen: list[Grapheme] = []
     used = 0
+    used_code_points = 0
     for match in _GRAPHEME_RE.finditer(text, start, end):
+        size = match.end() - match.start()
+        if used_code_points + size > max_code_points:
+            break
         item = Grapheme(match.group(), match.start(), match.end())
         width = display_width(escape_for_width(item.text))
         if chosen and used + width > max_cells:
@@ -2099,10 +2137,9 @@ def _take_text_left(
         if not chosen and width > max_cells and max_cells > 0:
             chosen.append(item)
             break
-        if max_cells <= 0:
-            break
         chosen.append(item)
         used += width
+        used_code_points += size
     return tuple(chosen)
 
 
@@ -2112,19 +2149,34 @@ def _take_text_right(
     end: int,
     max_cells: int,
     escape_for_width: EscapeForWidth,
+    *,
+    max_code_points: int = EXCERPT_CODE_POINT_LIMIT,
 ) -> tuple[Grapheme, ...]:
-    if max_cells <= 0:
+    if max_cells <= 0 or max_code_points <= 0:
         return ()
     chosen: deque[tuple[Grapheme, int]] = deque()
     used = 0
+    used_code_points = 0
     for match in _GRAPHEME_RE.finditer(text, start, end):
+        size = match.end() - match.start()
+        if size > max_code_points:
+            # Do not copy or escape an enormous indivisible grapheme. A suffix
+            # can restart after it, but must never bridge across the omission.
+            chosen.clear()
+            used = 0
+            used_code_points = 0
+            continue
         item = Grapheme(match.group(), match.start(), match.end())
         width = display_width(escape_for_width(item.text))
         chosen.append((item, width))
         used += width
-        while len(chosen) > 1 and used > max_cells:
-            _removed, removed_width = chosen.popleft()
+        used_code_points += size
+        while len(chosen) > 1 and (
+            used > max_cells or used_code_points > max_code_points
+        ):
+            removed, removed_width = chosen.popleft()
             used -= removed_width
+            used_code_points -= len(removed.text)
     return tuple(item for item, _width in chosen)
 
 

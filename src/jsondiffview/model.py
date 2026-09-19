@@ -7,6 +7,8 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import TypeAlias
 
+from .terminal import requires_visible_escape
+
 DIAGNOSTIC_TEXT_LIMIT = 80
 DIAGNOSTIC_MESSAGE_LIMIT = 512
 
@@ -168,14 +170,8 @@ def bounded_diagnostic_text(text: str) -> str:
 
     parts: list[str] = []
     for character in text:
-        code_point = ord(character)
-        if (
-            code_point < 0x20
-            or 0x7F <= code_point <= 0x9F
-            or code_point in {0x2028, 0x2029}
-            or 0xD800 <= code_point <= 0xDFFF
-        ):
-            parts.append(f"\\u{code_point:04x}")
+        if requires_visible_escape(character):
+            parts.append(f"\\u{ord(character):04x}")
         else:
             parts.append(character)
     return "".join(parts)
