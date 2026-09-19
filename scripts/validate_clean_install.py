@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 NAME = "jsondiffview"
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 WHEEL_NAME = f"{NAME}-{VERSION}-py3-none-any.whl"
 
 

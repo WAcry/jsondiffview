@@ -32,7 +32,7 @@ Or build and install the local wheel:
 
 ```console
 uv build --no-sources
-uv tool install ./dist/jsondiffview-3.0.0-py3-none-any.whl
+uv tool install ./dist/jsondiffview-3.1.0-py3-none-any.whl
 ```
 
 Both entry points use the same implementation:
