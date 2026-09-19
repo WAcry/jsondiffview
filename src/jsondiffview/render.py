@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import unicodedata
 from dataclasses import dataclass
 from typing import TypeAlias
 
@@ -35,6 +34,7 @@ from .strings import (
     excerpt_cells_for_view,
     project_string_diff,
 )
+from .terminal import requires_visible_escape
 
 SUBTREE_SUMMARY_THRESHOLD = 8
 SUMMARY_PREVIEW_CHILDREN = 2
@@ -294,13 +294,18 @@ def _render_unchanged_value(
             projected.append(_Omission(item_count - 1))
 
     child_blocks: list[_Block] = []
+    # Unchanged projections expose a prefix (all children in full, one in
+    # review, none in summary). Consume keys once instead of list(value)[i],
+    # which copies the entire dictionary for every displayed child.
+    keys = iter(value) if isinstance(value, dict) else None
     for item in projected:
         if isinstance(item, _Omission):
             noun = "field" if isinstance(value, dict) else "item"
             child_blocks.append(_omission_block(item.count, indent + 1, noun))
             continue
         if isinstance(value, dict):
-            key = list(value)[item]
+            assert keys is not None
+            key = next(keys)
             child_blocks.append(
                 _render_unchanged_value(
                     value[key],
@@ -1029,13 +1034,8 @@ def _escape_json_fragment(
         if escaped is not None:
             parts.append(escaped)
             continue
-        code_point = ord(character)
-        if (
-            unicodedata.category(character) == "Cc"
-            or code_point in {0x2028, 0x2029}
-            or 0xD800 <= code_point <= 0xDFFF
-        ):
-            parts.append(f"\\u{code_point:04x}")
+        if requires_visible_escape(character):
+            parts.append(f"\\u{ord(character):04x}")
         else:
             parts.append(character)
     return "".join(parts)

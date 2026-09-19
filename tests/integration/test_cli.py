@@ -87,6 +87,7 @@ def test_project_metadata_exposes_only_current_identity() -> None:
         "/MIGRATING.md",
         "/README.md",
         "/benchmarks",
+        "/docs",
         "/playground",
         "/pyproject.toml",
         "/src",
@@ -531,3 +532,39 @@ def test_quiet_does_not_suppress_differences_or_errors(tmp_path: Path) -> None:
     assert difference.stdout
     assert error.returncode == 2
     assert error.stderr
+
+
+@pytest.mark.parametrize("view", ["summary", "review", "full"])
+def test_duplicate_reorder_has_visible_provenance_and_diff_status(
+    tmp_path: Path,
+    view: str,
+) -> None:
+    old, new = write_pair(tmp_path, b'["a","b","a"]', b'["a","a","b"]')
+    result = run_module(["--view", view, "--color", "never", str(old), str(new)])
+    assert result.returncode == 1
+    assert result.stderr == b""
+    assert b"moved from $[1] to $[2]" in result.stdout
+    assert b"3 unchanged items omitted" not in result.stdout
+
+
+def test_bidi_usage_error_is_escaped_and_keeps_the_stream_contract() -> None:
+    result = run_module(["--view", "invalid\u202eoption", "old.json", "new.json"])
+    assert result.returncode == 2
+    assert result.stdout == b""
+    assert "\u202e".encode() not in result.stderr
+    assert b"\\u202e" in result.stderr
+    assert result.stderr.count(b"\n") == 1
+
+
+@pytest.mark.parametrize("view", ["summary", "review", "full"])
+def test_zero_width_payload_cannot_expand_cli_output_unboundedly(
+    tmp_path: Path,
+    view: str,
+) -> None:
+    giant = "e" + "\u0301" * 100_000
+    old, new = write_pair(tmp_path, b"null", json.dumps(giant).encode())
+    result = run_module(["--view", view, "--color", "never", str(old), str(new)])
+    assert result.returncode == 1
+    assert result.stderr == b""
+    assert len(result.stdout) < 1_000
+    assert b"100001 code points omitted" in result.stdout

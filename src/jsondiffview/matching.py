@@ -710,17 +710,55 @@ def _edge_pairs(
 
 
 def _stationary_positions(matches: list[ArrayMatch]) -> set[int]:
-    """Return the lexicographically-smallest old-index LIS in O(k log k)."""
+    """Minimize trusted moves while keeping duplicate alignments stationary.
 
-    if not matches:
+    Evidence-less pairs are already monotone. They must all belong to the
+    stationary backbone: dropping one from an ordinary LIS and then suppressing
+    its move would silently leave crossing pairs marked unchanged. Each such
+    pair therefore bounds an independent LIS problem on the trusted matches
+    between it and the previous anchor. Total work remains O(k log k).
+    """
+
+    stationary: set[int] = set()
+    gap_start = 0
+    lower_old = -1
+    anchors = [
+        position for position, match in enumerate(matches) if match.evidence is None
+    ]
+    if not anchors:
+        return _lexical_lis_positions([match.old_index for match in matches])
+    for anchor in (*anchors, len(matches)):
+        upper_old = matches[anchor].old_index if anchor < len(matches) else None
+        candidates = [
+            position
+            for position in range(gap_start, anchor)
+            if matches[position].old_index > lower_old
+            and (upper_old is None or matches[position].old_index < upper_old)
+        ]
+        selected = _lexical_lis_positions(
+            [matches[position].old_index for position in candidates]
+        )
+        stationary.update(candidates[position] for position in selected)
+        if upper_old is not None:
+            stationary.add(anchor)
+            lower_old = upper_old
+        gap_start = anchor + 1
+    return stationary
+
+
+def _lexical_lis_positions(old_indexes: list[int]) -> set[int]:
+    """Return a longest increasing subsequence with lexical old-index ties."""
+
+    if not old_indexes:
         return set()
-    old_indexes = sorted(match.old_index for match in matches)
-    rank_by_old = {old_index: rank + 1 for rank, old_index in enumerate(old_indexes)}
+    rank_by_old = {
+        old_index: rank + 1 for rank, old_index in enumerate(sorted(old_indexes))
+    }
     old_limit = len(old_indexes)
     fenwick = array("I", [0]) * (old_limit + 1)
-    lis_from = [0] * len(matches)
-    for position in range(len(matches) - 1, -1, -1):
-        rank = old_limit - rank_by_old[matches[position].old_index] + 1
+    lis_from = [0] * old_limit
+    for position in range(old_limit - 1, -1, -1):
+        rank = old_limit - rank_by_old[old_indexes[position]] + 1
         lis_from[position] = 1 + _fenwick_query(fenwick, rank - 1)
         _fenwick_update(fenwick, rank, lis_from[position])
 
@@ -728,8 +766,8 @@ def _stationary_positions(matches: list[ArrayMatch]) -> set[int]:
     stationary: set[int] = set()
     last_position = -1
     for position in sorted(
-        range(len(matches)),
-        key=lambda item: matches[item].old_index,
+        range(old_limit),
+        key=old_indexes.__getitem__,
     ):
         if position <= last_position or lis_from[position] < remaining:
             continue
