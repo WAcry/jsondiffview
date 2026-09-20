@@ -87,7 +87,6 @@ def test_project_metadata_exposes_only_current_identity() -> None:
         "/MIGRATING.md",
         "/README.md",
         "/benchmarks",
-        "/docs",
         "/playground",
         "/pyproject.toml",
         "/src",
