@@ -156,18 +156,6 @@ output limits are deterministic work counters, including in `full`. Strings
 shown only on one side or as unchanged context are also bounded at 512 code
 points, including values containing line breaks.
 
-Every string excerpt is limited to 512 code points, including its omission
-marker, as well as the view's display-cell allowance. Zero-width characters
-and combining sequences cannot bypass that limit. An indivisible grapheme
-that does not fit is omitted whole, with an exact omitted-code-point count;
-it is never split. These limits also apply to long-string hunk context and
-identity values in move explanations.
-
-Terminal controls and Unicode bidirectional controls are displayed as visible
-JSON escapes in keys, values, move explanations, and diagnostics. Ordinary
-Arabic, Hebrew, and other scripts remain readable; emoji joiners and text
-joiners are preserved rather than escaping every Unicode format character.
-
 The main review above includes a pure move (`db`). Array removals retain their
 old index:
 
@@ -249,11 +237,8 @@ remain a removal plus an addition. Null, object, and array identity-key values
 are unavailable, and a lower-priority key cannot override conflicting
 higher-priority scalar identities.
 
-Moves are the minimal deterministic relative-order changes among trusted
-matches, subject to keeping duplicate exact-value alignments stationary.
-Those evidence-less alignments form mandatory monotone anchors: a trusted
-match crossing an anchor must be shown as moved, not silently called
-unchanged. Insertions and removals that merely shift absolute indexes do not
+Moves are the minimal deterministic relative-order changes among matched
+entries. Insertions and removals that merely shift absolute indexes do not
 mark every survivor as moved. A moved entry keeps its old/new paths and can
 also show nested modifications.
 
@@ -271,17 +256,6 @@ uv build --no-sources
 ```
 
 The package supports CPython 3.11 and newer.
-
-The [review-core audit and design decisions](https://github.com/WAcry/jsondiffview/blob/main/docs/review-core-audit.md) record
-reproduced defects, the constrained move algorithm, resource-bound tests,
-benchmark methodology, and remaining redesign opportunities. Focused,
-non-gating measurements can be reproduced with:
-
-```console
-uv run --locked python benchmarks/benchmark_review_invariants.py --case full-context
-uv run --locked python benchmarks/benchmark_review_invariants.py --case mixed-duplicates
-uv run --locked python benchmarks/benchmark_review_invariants.py --case zero-width
-```
 
 ## Release publication
 

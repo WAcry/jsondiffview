@@ -64,7 +64,6 @@ include = [
   "/MIGRATING.md",
   "/README.md",
   "/benchmarks",
-  "/docs",
   "/playground",
   "/pyproject.toml",
   "/src",

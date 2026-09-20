@@ -93,7 +93,6 @@ SDIST_FILES = (
         "PKG-INFO",
         "benchmarks/benchmark_jsondiffview.py",
         "benchmarks/benchmark_review_invariants.py",
-        "docs/review-core-audit.md",
         "pyproject.toml",
         "uv.lock",
     }
